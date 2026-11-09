@@ -550,10 +550,12 @@ end
                 dt_us * 1000, dt_pred * 1000, tostring(predict));
         end;
 
-        local other_pos = predicted_other_pos or self.entity:FindFirstChild("HumanoidRootPart") and self.entity.HumanoidRootPart.CFrame or CFrame.new();
+        local other_root = self.entity and (self.entity:FindFirstChild("HumanoidRootPart") or self.entity:FindFirstChild("Torso") or self.entity:FindFirstChildWhichIsA("BasePart"));
+        local other_pos = predicted_other_pos or (other_root and other_root.CFrame) or CFrame.new();
 
         if not predict then
-            return general:in_hitbox_with_pos(local_player.root_part.CFrame, self.entity.HumanoidRootPart.CFrame, hitbox, offset, hidden, self.ball)
+            if not other_root or not local_player.root_part then return false end
+            return general:in_hitbox_with_pos(local_player.root_part.CFrame, other_root.CFrame, hitbox, offset, hidden, self.ball)
         end;
 
         local t_hb = tick();
@@ -561,7 +563,7 @@ end
         local dt_hb = tick() - t_hb;
 
         local t_hb2 = tick();
-        local base = base_predict and general:in_hitbox_with_pos(local_player.root_part.CFrame, self.entity.HumanoidRootPart.CFrame, hitbox, offset, hidden, self.ball);
+        local base = base_predict and other_root and local_player.root_part and general:in_hitbox_with_pos(local_player.root_part.CFrame, other_root.CFrame, hitbox, offset, hidden, self.ball);
         local dt_hb2 = tick() - t_hb2;
 
         if dt_hb > 0.002 or dt_hb2 > 0.002 then
@@ -842,7 +844,8 @@ end
 end;
 
         if aztup_options.filters.Value["Dont Parry If Off Screen"] and not aztup.automation:has_any() then
-            local _, vis = workspace.CurrentCamera:WorldToViewportPoint(self.entity.HumanoidRootPart.Position);
+            local root = self.entity and (self.entity:FindFirstChild("HumanoidRootPart") or self.entity:FindFirstChild("Torso") or self.entity:FindFirstChildWhichIsA("BasePart"));
+            local _, vis = root and workspace.CurrentCamera and workspace.CurrentCamera:WorldToViewportPoint(root.Position) or false;
             if not vis then
                 debug_print("[%s] Skipping action %i, Entity is off screen.", name, index);
                 return "continue"            
@@ -1402,11 +1405,12 @@ end;
     
     
     local function log_info_if_enabled(self, track)
-        if not (aztup.flags.info_logger and self.entity:FindFirstChild("HumanoidRootPart") and self.entity.Name ~= local_player.character.Name) then
+        local root = self.entity and self.entity:FindFirstChild("HumanoidRootPart");
+        if not (aztup.flags.info_logger and root and local_player.root_part and self.entity.Name ~= local_player.character.Name) then
             return        
-end
+        end
 
-        local dist = (local_player.root_part.Position - self.entity.HumanoidRootPart.Position).Magnitude;
+        local dist = (local_player.root_part.Position - root.Position).Magnitude;
         if dist > aztup.flags.info_logger_range then
             return        
 end
@@ -1570,7 +1574,9 @@ end
                 defender = self,
                 self = {
                     distance = function()
-                        return (local_player.root_part.Position - self.entity.HumanoidRootPart.Position).Magnitude
+                        local root = self.entity and (self.entity:FindFirstChild("HumanoidRootPart") or self.entity:FindFirstChild("Torso") or self.entity:FindFirstChildWhichIsA("BasePart"));
+                        if not root or not local_player.root_part then return math.huge end
+                        return (local_player.root_part.Position - root.Position).Magnitude
                     end,
                     is_playing = function()
                         return track_still_active(track, self.entity)
