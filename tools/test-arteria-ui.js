@@ -157,7 +157,7 @@ assert(navigation.ScrollBarThickness==0,"remove the distracting sidebar scroll s
 assert(visible_count()==6,"preserve movement controls")
 assert(tween_calls==0,"system reduced-motion preference must skip all tweens")
 local total=0;for _,child in ipairs(scroll:GetChildren()) do if child:IsA("Frame") then total+=1 end end
-assert(total==58,"preserve selected features and add the Arteria ESP suite")
+assert(total==56,"preserve selected features and add the Arteria ESP suite")
 fire(navigation:FindFirstChild("NavCombat"))
 local expected=0;for _,entry in ipairs(catalog.entries) do if entry.section=="Combat" then expected+=1 end end
 assert(visible_count()==expected,"sidebar navigation")

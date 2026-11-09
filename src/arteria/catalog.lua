@@ -111,8 +111,6 @@ add("World", "ap_breaker", "AP breaker", "@src/features/exploits/ap_breaker", {
     choice("ap_breaker_type", "Mode", "Passive", { "Passive", "Aggressive", "Aggressive 2 (Blatant)", "Aggressive 3 (Blatant)" }),
     number("ap_breaker_intensity", "Intensity", 4, 1, 500),
 }, "observer")
-add("World", "bring_mobs", "Bring mobs", "@src/features/qol/bring_mobs", nil, nil, "Requires network ownership")
-add("World", "void_mobs", "Void mobs", "@src/features/qol/void_mobs", nil, nil, "Requires network ownership")
 add("World", "fake_void", "Fake void", "@src/features/qol/fake_void", nil, nil, "Depths only · uses no-kill-bricks dependency")
 
 -- Removals
