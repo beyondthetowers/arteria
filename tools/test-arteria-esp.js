@@ -32,11 +32,12 @@ local function model(parts)
     local object={parts=parts,FindFirstChild=function(self,name)return self.parts[name]end,
         FindFirstChildOfClass=function(self,class)return class=="Humanoid" and self.parts.Humanoid or nil end,
         IsA=function(_,class)return class=="Model"end,GetAttribute=function()return nil end,
+        GetDescendants=function(self)local list={};for _,part in pairs(self.parts)do table.insert(list,part)end;return list end,
         FindFirstChildWhichIsA=function(self,class)for _,part in pairs(self.parts)do if part.IsA and part:IsA(class)then return part end end end}
     for _,part in pairs(parts)do part.Parent=object end
     return object
 end
-local function part(x,y,z)return {Position=vec(x,y,z),CFrame=CFrame.new(x,y,z),Size={Y=2},IsA=function(_,class)return class=="BasePart"end,
+local function part(x,y,z)return {Position=vec(x,y,z),CFrame=CFrame.new(x,y,z),Size=vec(2,2,2),IsA=function(_,class)return class=="BasePart"end,
     FindFirstChild=function()return nil end,GetAttribute=function()return nil end}end
 local own={Team="red",Character=model({HumanoidRootPart=part(0,0,10)})}
 local enemy={Team="blue",Character=model({Head=part(40,20,10),Torso=part(40,40,10),["Left Arm"]=part(25,40,10),["Right Arm"]=part(55,40,10),["Left Leg"]=part(35,60,10),["Right Leg"]=part(45,60,10),HumanoidRootPart=part(40,40,10),Humanoid={Health=100}})}
@@ -140,14 +141,50 @@ world_esp:disable();assert(world_esp.gui==nil,"world backend cleanup")
 aztup.brand="arteria"
 local LPH_NO_VIRTUALIZE=function(f)return f end
 require=function(name)
+    if name=="@src/arteria/theme"then return theme end
     if name=="@src/arteria/player_esp"then return player_esp end
     if name=="@src/arteria/world_esp"then return world_esp end
-    error("Legacy backend was initialized unexpectedly: "..name)
+    if name=="@src/features/misc/mod_detector/group_members"then return {["12345"]="Admin"} end
+    error("Unexpected require in ESP test: "..name)
 end
 local old_player=(function() ${fs.readFileSync(path.join(root, "src/features/visuals/player_esp.lua"), "utf8")} end)()
 local old_world=(function() ${fs.readFileSync(path.join(root, "src/features/visuals/base_esp.lua"), "utf8")} end)()
 assert(old_player()==player_esp and old_world()==world_esp,"existing ESP entry points must route into Arteria")
-print("arteria ESP expansion: neon player frames/names/health/highlights, bounded world categories, label budgets, pooling, legacy routing and cleanup passed")
+local mob_esp=(function() ${fs.readFileSync(path.join(root, "src/arteria/mob_esp.lua"), "utf8")} end)()
+aztup.flags.arteria_mob_range,aztup.flags.arteria_mob_limit,aztup.flags.arteria_mob_thickness,aztup.flags.arteria_mob_text=2000,40,1,13
+aztup_options.arteria_mob_skeleton,aztup_options.arteria_mob_health,aztup_options.arteria_mob_distance={Value="Enabled"},{Value="Bar and value"},{Value="Shown"}
+mob_esp:enable();run.RenderStepped:Fire(0.1)
+assert(mob_esp.pool[1].label.Visible and mob_esp.pool[1].label.Text:find("guard etrean"),"mob label and health")
+mob_esp:disable();assert(mob_esp.gui==nil,"mob esp cleanup")
+local chest_esp=(function() ${fs.readFileSync(path.join(root, "src/arteria/chest_esp.lua"), "utf8")} end)()
+aztup.flags.arteria_chest_range,aztup.flags.arteria_chest_text=3000,13
+aztup_options.arteria_chest_opened={Value="Show"}
+aztup_toggles.chest_esp={SetValue=function()chest_esp:disable()end}
+chest_esp:enable();run.RenderStepped:Fire(0.1)
+assert(chest_esp.pool[1].label.Visible and chest_esp.pool[1].label.Text:find("CHEST"),"chest esp label")
+chest_esp:disable();assert(chest_esp.gui==nil,"chest esp cleanup")
+local npc_esp=(function() ${fs.readFileSync(path.join(root, "src/arteria/npc_esp.lua"), "utf8")} end)()
+local npc_model=model({HumanoidRootPart=part(30,30,10)})
+container("NPCs",{npc_model})
+aztup.flags.arteria_npc_range,aztup.flags.arteria_npc_text=2000,13
+aztup_toggles.npc_esp={SetValue=function()npc_esp:disable()end}
+npc_esp:enable();run.RenderStepped:Fire(0.1)
+assert(npc_esp.pool[1].label.Visible and npc_esp.pool[1].label.Text:find("NPC"),"npc esp label")
+npc_esp:disable();assert(npc_esp.gui==nil,"npc esp cleanup")
+require=function(name)
+    if name=="@src/arteria/theme"then return theme end
+    if name=="@src/features/misc/mod_detector/group_members"then return {["12345"]="Admin"} end
+    error("Unexpected require in mod detector: "..name)
+end
+local mod_detector=(function() ${fs.readFileSync(path.join(root, "src/arteria/mod_detector.lua"), "utf8")} end)()
+aztup_options.arteria_mod_serverhop,aztup_options.arteria_mod_sound={Value="Off"},{Value="Off"}
+local staff=model({HumanoidRootPart=part(10,10,10)})
+staff.Name,staff.UserId="LeadStaff",12345
+player_list={own,enemy,staff}
+mod_detector:enable()
+assert(mod_detector.detected_mods[staff]=="Admin","mod detection")
+mod_detector:disable();assert(mod_detector.gui==nil,"mod detector cleanup")
+print("arteria ESP expansion: neon player frames/names/health/highlights, mob/npc/chest/mod backends, pooling, legacy routing and cleanup passed")
 `;
 try { fs.writeFileSync(file, source); console.log(execFileSync(binary, [file], { cwd: root, encoding: "utf8" })); }
 finally { fs.unlinkSync(file); fs.rmdirSync(directory); }

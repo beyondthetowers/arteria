@@ -150,14 +150,14 @@ local function fire(button) button.Activated:Fire() end
 local function visible_count()
     local count=0;for _,child in ipairs(scroll:GetChildren()) do if child:IsA("Frame") and child.Visible then count+=1 end end;return count
 end
-assert(panel.AbsoluteSize.X==840 and sidebar.AbsoluteSize.X==190,"desktop composition")
+assert(panel.AbsoluteSize.X==880 and sidebar.AbsoluteSize.X==210,"desktop composition")
 local nav_settings=navigation:FindFirstChild("NavSettings")
 assert(nav_settings:FindFirstChild("UIPadding").PaddingLeft.Offset-nav_settings:FindFirstChild("Marker").Position.X.Offset-2>=20,"selection marker must stay separated from 07")
 assert(navigation.ScrollBarThickness==0,"remove the distracting sidebar scroll stripe")
 assert(visible_count()==6,"preserve movement controls")
 assert(tween_calls==0,"system reduced-motion preference must skip all tweens")
 local total=0;for _,child in ipairs(scroll:GetChildren()) do if child:IsA("Frame") then total+=1 end end
-assert(total==49,"preserve selected features and add the Arteria ESP suite")
+assert(total==57,"preserve selected features and add the Arteria ESP suite")
 fire(navigation:FindFirstChild("NavCombat"))
 local expected=0;for _,entry in ipairs(catalog.entries) do if entry.section=="Combat" then expected+=1 end end
 assert(visible_count()==expected,"sidebar navigation")
@@ -202,10 +202,10 @@ fire(profiles:FindFirstChild("MenuKey"))
 input.InputBegan:Fire({KeyCode=Enum.KeyCode.Home,UserInputType=Enum.UserInputType.Keyboard},false)
 assert(runtime.ui_key==Enum.KeyCode.Home,"menu key rebinding")
 fire(navigation:FindFirstChild("NavVisuals"))
-assert(visible_count()==3 and scroll:FindFirstChild("skeleton_esp").Visible and scroll:FindFirstChild("player_esp").Visible and scroll:FindFirstChild("world_esp").Visible,"Visuals ESP suite")
+assert(visible_count()==11 and scroll:FindFirstChild("skeleton_esp").Visible and scroll:FindFirstChild("player_esp").Visible and scroll:FindFirstChild("mob_esp").Visible and scroll:FindFirstChild("chest_esp").Visible and scroll:FindFirstChild("npc_esp").Visible and scroll:FindFirstChild("mod_detector").Visible,"Visuals ESP suite")
 fire(navigation:FindFirstChild("NavMovement"))
 viewport=Vector2.new(360,780);runtime.gui:GetPropertyChangedSignal("AbsoluteSize"):Fire()
-assert(panel.AbsoluteSize.X==336 and sidebar.AbsoluteSize.X==60,"mobile rail without shrinking typography")
+assert(panel.AbsoluteSize.X==336 and sidebar.AbsoluteSize.X==64,"mobile rail without shrinking typography")
 for _,child in ipairs(scroll:GetChildren()) do
     if child:IsA("Frame") then
         for _,name in ipairs({"Bind","Details","Toggle"}) do

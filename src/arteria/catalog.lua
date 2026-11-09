@@ -1,5 +1,5 @@
 -- Explicit allowlist. Unlisted legacy modules are archived, not initialized.
-local catalog = { sections = { "Movement", "Combat", "World", "Removals", "Visuals" }, entries = {} }
+local catalog = { sections = { "Movement", "Combat", "Visuals", "World", "Removals" }, entries = {} }
 local function add(section, id, label, path, settings, kind, note)
     table.insert(catalog.entries, { section = section, id = id, label = label,
         path = path, settings = settings or {}, kind = kind or "module", note = note })
@@ -10,6 +10,8 @@ end
 local function choice(id, label, value, values)
     return { id = id, label = label, value = value, values = values }
 end
+
+-- Movement
 add("Movement", "fly", "Fly", "@src/features/movement/fly", { number("fly_speed", "Speed", 60, 1, 250) })
 add("Movement", "speed", "Walk speed", "@src/features/movement/speed", { number("walk_speed", "Speed", 32, 1, 250) })
 add("Movement", "multiply_s", "Walkspeed multiplier", "@src/features/movement/multiply_s", {
@@ -19,6 +21,8 @@ add("Movement", "multiply_s", "Walkspeed multiplier", "@src/features/movement/mu
 add("Movement", "infinite_jump", "Infinite jump", "@src/features/movement/infinite_jump", { number("jump_power", "Jump power", 50, 1, 150) })
 add("Movement", "noclip", "Noclip", "@src/features/movement/noclip")
 add("Movement", "dont_noclip_while_knocked", "Disable noclip while knocked", nil, nil, "flag", "Applies while noclip is enabled")
+
+-- Combat
 add("Combat", "auto_parry", "Auto parry", nil, nil, "parry")
 add("Combat", "auto_fight", "Auto fight mobs", "@src/features/auto-fight/auto-fight", nil, nil, "WIP · limited mob support")
 add("Combat", "m1_hold", "M1 hold", "@src/features/combat/m1_hold")
@@ -43,6 +47,60 @@ add("Combat", "show_hitbox_simulation", "Hitbox simulation", "@src/features/auto
     number("HS_HitboxSizeX", "Width", 4, 0.1, 250), number("HS_HitboxSizeY", "Height", 4, 0.1, 250),
     number("HS_HitboxSizeZ", "Depth", 4, 0.1, 250), number("HS_ShiftOffset", "Offset", 0, -250, 30),
 })
+
+-- Visuals
+add("Visuals", "player_esp", "Player ESP", "@src/arteria/player_esp", {
+    choice("arteria_player_boxes", "Box Style", "Corners", { "Corners", "Full box", "No box" }),
+    choice("arteria_player_names", "Name Display", "Character", { "Character", "Display name", "Username", "Hidden" }),
+    choice("arteria_player_health", "Health Display", "Bar and value", { "Bar and value", "Bar", "Value", "Hidden" }),
+    choice("arteria_player_distance", "Distance Display", "Shown", { "Shown", "Hidden" }),
+    choice("arteria_player_highlight", "Highlight Mode", "Off", { "Off", "Outline", "Silhouette" }),
+    choice("arteria_player_teams", "Target Filter", "Everyone", { "Everyone", "Other teams" }),
+    number("arteria_player_range", "Maximum Range", 2000, 25, 10000),
+    number("arteria_player_text", "Text Size", 13, 10, 20),
+}, "visual", "Neon player boxes · health · names · distance · optional highlights")
+add("Visuals", "skeleton_esp", "Player Skeleton ESP", "@src/arteria/skeleton_esp", {
+    number("skeleton_esp_range", "Maximum Range", 2000, 25, 10000),
+    number("skeleton_esp_thickness", "Bone Thickness", 1, 1, 4),
+    choice("skeleton_esp_targets", "Players", "Everyone", { "Everyone", "Other teams" }),
+}, "visual", "Bone-white R6 / R15 skeletons for players")
+add("Visuals", "mob_esp", "Mob ESP", "@src/arteria/mob_esp", {
+    choice("arteria_mob_skeleton", "Mob Skeleton", "Enabled", { "Enabled", "Disabled" }),
+    choice("arteria_mob_health", "Health Display", "Bar and value", { "Bar and value", "Bar", "Value", "Hidden" }),
+    choice("arteria_mob_distance", "Distance Display", "Shown", { "Shown", "Hidden" }),
+    number("arteria_mob_range", "Maximum Range", 2000, 25, 10000),
+    number("arteria_mob_thickness", "Bone Thickness", 1, 1, 4),
+    number("arteria_mob_limit", "Max Visible Mobs", 40, 5, 100),
+    number("arteria_mob_text", "Text Size", 13, 10, 20),
+}, "visual", "Mob skeletons (humanoid & monsters) · health bar & value · distance")
+add("Visuals", "npc_esp", "NPC ESP", "@src/arteria/npc_esp", {
+    number("arteria_npc_range", "Maximum Range", 2000, 25, 10000),
+    number("arteria_npc_text", "Text Size", 13, 10, 20),
+}, "visual", "NPC markers and distance labels")
+add("Visuals", "chest_esp", "Chest ESP", "@src/arteria/chest_esp", {
+    choice("arteria_chest_opened", "Show Opened", "Hide", { "Hide", "Show" }),
+    number("arteria_chest_range", "Maximum Range", 3000, 25, 10000),
+    number("arteria_chest_text", "Text Size", 13, 10, 20),
+}, "visual", "Chest corner boxes and distance labels")
+add("Visuals", "mod_detector", "Mod Notification", "@src/arteria/mod_detector", {
+    choice("arteria_mod_serverhop", "Auto Serverhop", "Off", { "Off", "On" }),
+    choice("arteria_mod_sound", "Alert Sound", "On", { "On", "Off" }),
+}, "visual", "Detects Deepwoken staff & moderators · screen-space neon alert banner")
+add("Visuals", "full_bright", "Full Bright", "@src/features/visuals/full_bright", {
+    number("fullbright_intensity", "Intensity %", 100, 0, 100),
+}, nil, "Brightens ambient lighting")
+add("Visuals", "free_cam", "Freecam", "@src/features/visuals/free_cam", {
+    number("free_cam_speed", "Speed", 4, 1, 30),
+    choice("safe_spot", "Safe Spot Mode", "Off", { "Off", "On" }),
+}, nil, "Free-flying camera with safe spot option")
+add("Visuals", "inf_zoom", "Infinite Zoom", "@src/features/visuals/inf_zoom", nil, nil, "Unlocks camera zoom distance")
+add("Visuals", "zoom", "Zoom", "@src/features/visuals/zoom", {
+    number("zoom_sens_mult", "Sensitivity Mult", 0.5, 0.1, 1),
+    choice("zoom_apply_mouse_sens", "Apply Sensitivity", "On", { "On", "Off" }),
+}, nil, "Field of view zoom with sensitivity scaling")
+add("Visuals", "streamer_mode", "Streamer Mode", "@src/features/misc/streamer_mode", nil, nil, "Hides character name, slot, server info and user ID")
+
+-- World
 add("World", "ap_breaker", "AP breaker", "@src/features/exploits/ap_breaker", {
     choice("ap_breaker_type", "Mode", "Passive", { "Passive", "Aggressive", "Aggressive 2 (Blatant)", "Aggressive 3 (Blatant)" }),
     number("ap_breaker_intensity", "Intensity", 4, 1, 500),
@@ -50,6 +108,8 @@ add("World", "ap_breaker", "AP breaker", "@src/features/exploits/ap_breaker", {
 add("World", "bring_mobs", "Bring mobs", "@src/features/qol/bring_mobs", nil, nil, "Requires network ownership")
 add("World", "void_mobs", "Void mobs", "@src/features/qol/void_mobs", nil, nil, "Requires network ownership")
 add("World", "fake_void", "Fake void", "@src/features/qol/fake_void", nil, nil, "Depths only · uses no-kill-bricks dependency")
+
+-- Removals
 add("Removals", "no_fall", "No fall damage", "@src/features/removals/no_fall")
 add("Removals", "anti_afk", "No AFK kick", "@src/features/removals/anti_afk")
 add("Removals", "no_respawn_time", "No respawn timer / cooldown", "@src/features/misc/override_roblox_reset")
@@ -66,26 +126,5 @@ add("Removals", "no_wind", "No wind", "@src/features/removals/no_wind")
 add("Removals", "no_blur", "No blur", "@src/features/removals/no_blur")
 add("Removals", "no_sea", "No sea", "@src/features/removals/no_sea", nil, nil, "Legacy removal · rejoin to fully restore")
 add("Removals", "no_fog", "No fog", "@src/features/removals/no_fog")
-add("Visuals", "skeleton_esp", "Skeleton ESP", "@src/arteria/skeleton_esp", {
-    number("skeleton_esp_range", "Maximum distance", 2000, 25, 10000),
-    number("skeleton_esp_thickness", "Line thickness", 1, 1, 4),
-    choice("skeleton_esp_targets", "Players", "Everyone", { "Everyone", "Other teams" }),
-}, "visual", "Bone-white R6 / R15 skeletons · players only")
-add("Visuals", "player_esp", "Player ESP", "@src/features/visuals/player_esp", {
-    number("arteria_player_range", "Maximum distance", 2000, 25, 10000),
-    choice("arteria_player_boxes", "Frame style", "Corners", { "Corners", "Full box", "No box" }),
-    choice("arteria_player_names", "Name labels", "Character", { "Character", "Display name", "Username", "Hidden" }),
-    choice("arteria_player_health", "Health display", "Bar and value", { "Bar and value", "Bar", "Value", "Hidden" }),
-    choice("arteria_player_distance", "Distance labels", "Shown", { "Shown", "Hidden" }),
-    choice("arteria_player_highlight", "Character highlight", "Off", { "Off", "Outline", "Silhouette" }),
-    choice("arteria_player_teams", "Target filter", "Everyone", { "Everyone", "Other teams" }),
-    number("arteria_player_text", "Text size", 13, 10, 20),
-}, "visual-init", "Corner frames · names · health · distance · optional highlights")
-add("Visuals", "world_esp", "World ESP", "@src/features/visuals/base_esp", {
-    choice("arteria_world_category", "Show objects", "All", { "All", "Mobs", "Chests", "Ingredients", "Artifacts" }),
-    number("arteria_world_range", "Maximum distance", 2000, 25, 10000),
-    number("arteria_world_limit", "Visible label budget", 64, 8, 200),
-    number("arteria_world_text", "Text size", 13, 10, 20),
-    number("arteria_world_rate", "Updates per second", 20, 5, 60),
-}, "visual-init", "Legacy mob/chest/ingredient/artifact detection · Arteria labels")
+
 return catalog
