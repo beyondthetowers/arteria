@@ -1488,7 +1488,7 @@ data = table.clone(data);
 
 
             local action_type = data.action_type or "Undefined";
-            if action_type == "M1" then
+            if action_type == "M1" and aztup and aztup.features and aztup.features.ap_breaker then
                 aztup.features.ap_breaker.last_m1_anim = track.Animation.AnimationId;
             end;
     

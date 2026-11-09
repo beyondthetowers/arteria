@@ -267,7 +267,9 @@ function general:is_ap_anim(id)
 end;
 
 function general:playing_ap_anims(entity, ids)
-    for _, track in entity.Humanoid:GetPlayingAnimationTracks() do
+    local humanoid = entity and entity:FindFirstChild("Humanoid")
+    if not humanoid then return false end
+    for _, track in humanoid:GetPlayingAnimationTracks() do
         if ids then
             if table.find(ids, track.Animation.AnimationId) then
                 continue            

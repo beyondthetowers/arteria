@@ -33,7 +33,6 @@ add("Combat", "auto_parry", "Auto parry", nil, {
     number("dont_process_mobs_over_studs", "Mob Range", 2000, 50, 5000),
     choice("view_hitboxes", "Hitbox Visuals", "Off", { "Off", "On" }),
 }, "parry", "Automated parry defense · feints · validation · range filters")
-add("Combat", "auto_fight", "Auto fight mobs", "@src/features/auto-fight/auto-fight", nil, nil, "WIP · limited mob support")
 add("Combat", "m1_hold", "M1 hold", "@src/features/combat/m1_hold")
 add("Combat", "auto_dustlunge", "Auto assassination / dustlunge", "@src/features/combat/auto_dustlunge", nil, nil, "Hold V to trigger")
 add("Combat", "easy_roll_cancel", "Easy roll cancel", "@src/features/combat/easy_roll_cancel")

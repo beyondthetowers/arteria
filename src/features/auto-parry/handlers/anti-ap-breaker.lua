@@ -150,11 +150,15 @@ end
 end;
 
 function anti_ap_breaker:is_fully_dead(track, entity)
-    return not table.find(entity:FindFirstChild("Humanoid"):GetPlayingAnimationTracks(), track)
+    local humanoid = entity and entity:FindFirstChild("Humanoid")
+    if not humanoid then return true end
+    return not table.find(humanoid:GetPlayingAnimationTracks(), track)
 end;
 
 function anti_ap_breaker:is_playing(track, entity)
-    return track.IsPlaying or table.find(entity:FindFirstChild("Humanoid"):GetPlayingAnimationTracks(), track)
+    local humanoid = entity and entity:FindFirstChild("Humanoid")
+    if not humanoid then return false end
+    return track.IsPlaying or table.find(humanoid:GetPlayingAnimationTracks(), track)
 end;
 
 return anti_ap_breaker

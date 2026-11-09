@@ -2445,9 +2445,12 @@ return {
             windup = (0.158 / speed_of(track)) + 0.150
         elseif weapon.type == "Fist" then 
             windup = (0.140 / speed_of(track)) + 0.130
-            for _, anim in defender.entity.Humanoid:GetPlayingAnimationTracks() do
-                if anim.Animation.AnimationId == "rbxassetid://92562352733890" then
-                    windup = 0;
+            local humanoid = defender and defender.entity and defender.entity:FindFirstChild("Humanoid")
+            if humanoid then
+                for _, anim in humanoid:GetPlayingAnimationTracks() do
+                    if anim.Animation and anim.Animation.AnimationId == "rbxassetid://92562352733890" then
+                        windup = 0;
+                    end
                 end
             end
         elseif weapon.type == "Dagger" then
