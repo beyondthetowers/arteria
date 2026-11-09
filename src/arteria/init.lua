@@ -130,7 +130,14 @@ function runtime:set(id, enabled)
         if enabled then
             if not self.restorers[id] then self.restorers[id] = compat.restore_point(id) end
             self.enabling = id
-            feature:enable()
+            if id == "auto_builder" then
+                local mode = env.aztup_options.auto_builder_mode and env.aztup_options.auto_builder_mode.Value or "Talents & Points"
+                feature.shrined = (env.aztup_options.auto_builder_shrined and env.aztup_options.auto_builder_shrined.Value == "On")
+                if mode == "Talents & Points" or mode == "Talents only" then pcall(function() feature:build() end) end
+                if mode == "Talents & Points" or mode == "Points only" then pcall(function() feature:put_points() end) end
+            else
+                feature:enable()
+            end
             self.enabling = nil
             if not self.alive then feature:disable(); return end
             if not self.flags[id] then return end
@@ -150,7 +157,12 @@ function runtime:set(id, enabled)
                 end
             end)
         else
-            feature:disable()
+            if id == "auto_builder" then
+                pcall(function() feature:killswitch() end)
+                pcall(function() feature:points_killswitch() end)
+            else
+                feature:disable()
+            end
             if self.restorers[id] then self.restorers[id](); self.restorers[id] = nil end
         end
     end)
@@ -181,6 +193,12 @@ function runtime:option(option, value)
     self.flags[option.id] = value
     if env.aztup_options[option.id] then env.aztup_options[option.id].Value = value end
     if option.id == "arteria_anim_speed" then compat.animation_speed(self, value) end
+    if option.id == "auto_feint" then self.flags.auto_feint = (value == "On") end
+    if option.id == "basic_validation" then self.flags.basic_validation = (value == "On") end
+    if option.id == "view_hitboxes" then self.flags.view_hitboxes = (value == "On") end
+    if option.id == "auto_parry_fallback" and env.aztup_options.fallbacks then
+        env.aztup_options.fallbacks.Value = { [value] = true }
+    end
 end
 
 function runtime:destroy()

@@ -1,5 +1,5 @@
 -- Explicit allowlist. Unlisted legacy modules are archived, not initialized.
-local catalog = { sections = { "Movement", "Combat", "Visuals", "World", "Removals" }, entries = {} }
+local catalog = { sections = { "Movement", "Combat", "Visuals", "World", "Removals", "Automation" }, entries = {} }
 local function add(section, id, label, path, settings, kind, note)
     table.insert(catalog.entries, { section = section, id = id, label = label,
         path = path, settings = settings or {}, kind = kind or "module", note = note })
@@ -23,7 +23,16 @@ add("Movement", "noclip", "Noclip", "@src/features/movement/noclip")
 add("Movement", "dont_noclip_while_knocked", "Disable noclip while knocked", nil, nil, "flag", "Applies while noclip is enabled")
 
 -- Combat
-add("Combat", "auto_parry", "Auto parry", nil, nil, "parry")
+add("Combat", "auto_parry", "Auto parry", nil, {
+    choice("auto_feint", "Auto Feint", "On", { "On", "Off" }),
+    number("feint_chance", "Feint Chance %", 100, 0, 100),
+    number("parry_chance", "Parry Chance %", 100, 0, 100),
+    choice("basic_validation", "Anti-AP Validation", "On", { "On", "Off" }),
+    choice("auto_parry_fallback", "Fallback Move", "Curse of the Unbidden", { "Curse of the Unbidden", "Block", "Vent", "Prediction" }),
+    number("dont_process_players_over_studs", "Player Range", 500, 50, 5000),
+    number("dont_process_mobs_over_studs", "Mob Range", 2000, 50, 5000),
+    choice("view_hitboxes", "Hitbox Visuals", "Off", { "Off", "On" }),
+}, "parry", "Automated parry defense · feints · validation · range filters")
 add("Combat", "auto_fight", "Auto fight mobs", "@src/features/auto-fight/auto-fight", nil, nil, "WIP · limited mob support")
 add("Combat", "m1_hold", "M1 hold", "@src/features/combat/m1_hold")
 add("Combat", "auto_dustlunge", "Auto assassination / dustlunge", "@src/features/combat/auto_dustlunge", nil, nil, "Hold V to trigger")
@@ -39,9 +48,6 @@ add("Combat", "auto_golden_tongue", "Auto golden tongue", "@src/features/combat/
 add("Combat", "auto_ardour", "Auto ardour", "@src/features/combat/auto_ardour")
 add("Combat", "auto_flow_state", "Auto flow state", "@src/features/automation/auto_flow_state")
 add("Combat", "auto_uppercut", "Auto uppercut", "@src/features/automation/auto_uppercut")
-add("Combat", "auto_feint", "Auto feint", nil, { number("feint_chance", "Chance %", 100, 0, 100) }, "parry-flag", "Requires auto parry")
-add("Combat", "basic_validation", "Anti-AP-breaker validation", nil, nil, "flag", "Applies to auto parry")
-add("Combat", "view_hitboxes", "Hitbox visualization", nil, nil, "parry-flag", "Shows processed attack hitboxes")
 add("Combat", "show_hitbox_simulation", "Hitbox simulation", "@src/features/auto-parry/hitbox_simulator", {
     choice("HS_HitboxType", "Shape", "Block", { "Block", "Ball", "Cylinder" }),
     number("HS_HitboxSizeX", "Width", 4, 0.1, 250), number("HS_HitboxSizeY", "Height", 4, 0.1, 250),
@@ -126,5 +132,14 @@ add("Removals", "no_wind", "No wind", "@src/features/removals/no_wind")
 add("Removals", "no_blur", "No blur", "@src/features/removals/no_blur")
 add("Removals", "no_sea", "No sea", "@src/features/removals/no_sea", nil, nil, "Legacy removal · rejoin to fully restore")
 add("Removals", "no_fog", "No fog", "@src/features/removals/no_fog")
+
+-- Automation
+add("Automation", "auto_builder", "Auto Builder", "@src/features/auto-builder/auto_builder", {
+    choice("auto_builder_mode", "Target Mode", "Talents & Points", { "Talents & Points", "Talents only", "Points only" }),
+    choice("auto_builder_shrined", "Shrined Status", "Off", { "Off", "On" }),
+}, "builder", "Auto-allocates build stats & burns talents from builder link")
+add("Automation", "auto_chime_requeue", "Auto Join / Chime Requeue", "@src/features/automation/auto_chime_requeue", nil, nil, "Automatically joins next Chime of Conflict match")
+add("Automation", "auto_fish", "Auto Fish", "@src/features/automation/auto_fish", nil, nil, "Automates fishing rod casting & minigame")
+add("Automation", "auto_loot", "Auto Loot", "@src/features/auto-loot/auto-loot", nil, nil, "Automatically loots nearby chests & drops")
 
 return catalog
