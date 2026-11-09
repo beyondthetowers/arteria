@@ -1,6 +1,6 @@
 // tools/bundle.js
 //
-// Flattens the Frutiger module tree into one self-contained Lua chunk that
+// Flattens the module tree into one self-contained Lua chunk that
 // can be run through loadstring / game:HttpGet.
 //
 // What it does:
@@ -11,10 +11,10 @@
 //   - replaces list_modules() with static lists computed from the tree
 //   - pre-encodes assets/ as base64(zstd(bytes)) so inline_asset_b96 works with
 //     no disk access
-//   - runs @src/init
+//   - runs @src/arteria/init by default; --entry=src/init selects legacy
 //
 // Usage:
-//   node tools/bundle.js                 -> dist/frutiger.lua
+//   node tools/bundle.js                 -> dist/arteria.lua
 //   node tools/bundle.js --no-assets     -> skip asset embedding (much smaller)
 //   node tools/bundle.js --out=path.lua
 
@@ -29,9 +29,10 @@ const ASSETS = path.join(ROOT, "assets");
 
 const argv = process.argv.slice(2);
 const EMBED_ASSETS = !argv.includes("--no-assets");
+const ENTRY = (argv.find((a) => a.startsWith("--entry=")) || "--entry=src/arteria/init").slice(8).replace(/^@/, "");
 const OUT = (() => {
     const flag = argv.find((a) => a.startsWith("--out="));
-    return flag ? flag.slice(6) : path.join(ROOT, "dist", "frutiger.lua");
+    return flag ? flag.slice(6) : path.join(ROOT, "dist", "arteria.lua");
 })();
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -93,6 +94,7 @@ for (const file of allFiles) {
 }
 
 modules.sort((a, b) => a.id.localeCompare(b.id));
+if (!moduleIds.has(ENTRY)) throw new Error(`Unknown entry module: ${ENTRY}`);
 
 // ── globs ──────────────────────────────────────────────────────────────────
 
@@ -111,14 +113,20 @@ const globTables = globPatterns.map((pattern) => {
 // ── assets ─────────────────────────────────────────────────────────────────
 
 const assets = [];
-if (EMBED_ASSETS && fs.existsSync(ASSETS)) {
+// --no-assets skips optional media, never data required by selected features.
+const REQUIRED_ASSETS = new Set(["@assets/base.json", "@assets/extra_data.json"]);
+if (fs.existsSync(ASSETS)) {
     for (const file of walk(ASSETS)) {
         const key = "@assets/" + rel(file).slice("assets/".length);
+        if (!EMBED_ASSETS && !REQUIRED_ASSETS.has(key)) continue;
         const raw = fs.readFileSync(file);
         const compressed = zlib.zstdCompressSync(raw);
         assets.push({ key, b64: compressed.toString("base64") });
     }
     assets.sort((a, b) => a.key.localeCompare(b.key));
+}
+for (const key of REQUIRED_ASSETS) {
+    if (!assets.some((asset) => asset.key === key)) throw new Error(`Required runtime asset missing: ${key}`);
 }
 
 // ── emit ───────────────────────────────────────────────────────────────────
@@ -126,7 +134,7 @@ if (EMBED_ASSETS && fs.existsSync(ASSETS)) {
 const chunks = [];
 
 chunks.push(`--[[
-    Frutiger — bundled build
+    Arteria — bundled build
     generated ${new Date().toISOString()}
     modules: ${modules.length}
     assets:  ${assets.length}
@@ -212,7 +220,9 @@ require = __require;
 -- see it. Expose it on getgenv() so diagnostics and hot-patches can reach the
 -- module table.
 getgenv().Frutiger_require = __require;
-getgenv().Frutiger_modules = __modules;`);
+getgenv().Frutiger_modules = __modules;
+getgenv().Arteria_require = __require;
+getgenv().Arteria_modules = __modules;`);
 
 // list_modules
 chunks.push("");
@@ -242,15 +252,24 @@ if (assets.length) {
 
 // run
 chunks.push("");
-chunks.push(`local __ok, __err = xpcall(__require, function(e)
+const runner = `local __ok, __err = xpcall(__require, function(e)
     return tostring(e) .. "\\n" .. debug.traceback();
-end, "@src/init");
+end, ${luaString("@" + ENTRY)});
 
 if not __ok then
     warn("[bundle] init failed: " .. tostring(__err));
 end;
 
-return __ok;`);
+return __ok;`;
+// A local continuation can resume an explicitly confirmed echo session after
+// teleport, without fetching arbitrary remote code or resetting user settings.
+// The saved bootstrap deliberately omits its own embedded copy.
+if (ENTRY === "src/arteria/init") {
+    const resume = chunks.join("\n") + "\n" + runner;
+    const encoded = zlib.zstdCompressSync(Buffer.from(resume)).toString("base64");
+    chunks.push(`getgenv().Arteria_bootstrap_b64 = ${luaString(encoded)};`);
+}
+chunks.push(runner);
 
 const output = chunks.join("\n");
 
@@ -282,7 +301,7 @@ for (const ref of referenced) {
 }
 
 console.log(`modules:  ${modules.length}`);
-console.log(`assets:   ${assets.length}${EMBED_ASSETS ? "" : " (disabled)"}`);
+console.log(`assets:   ${assets.length}${EMBED_ASSETS ? "" : " (required data only)"}`);
 console.log(`globs:    ${globTables.map((g) => g.pattern + "=" + g.matches.length).join(", ")}`);
 console.log(`out:      ${OUT}  ${(output.length / 1024 / 1024).toFixed(2)} MB`);
 if (missing.length) {

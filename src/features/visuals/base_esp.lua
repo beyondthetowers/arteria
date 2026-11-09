@@ -1,4 +1,7 @@
 return LPH_NO_VIRTUALIZE(function()
+    if aztup and aztup.brand == "arteria" then
+        return require("@src/arteria/world_esp")
+    end
 	local settings_updated = false
 	local limited_esp_cache_result = false
 	local deepwoken_mesh_ids = require("@src/utility/deepwoken/deepwoken_meshes" .. "")

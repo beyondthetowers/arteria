@@ -1,6 +1,18 @@
 --!nocheck
 
 local automation_struct = require("@src/automation/struct");
+-- Optional Arteria ownership; legacy execution keeps its original environment.
+local task = task;
+local Tween = Tween;
+local server_utility = server_utility;
+local persistent_data = persistent_data;
+local native_queue = queue_on_teleport;
+local struct;
+local farm_scope;
+local function queue_on_teleport(source)
+    if farm_scope then return farm_scope:queue(source) end;
+    return native_queue(source);
+end;
 local echofarm = {
     playerCheck = function(mag, custom)
          for _, player in services.Players:GetPlayers() do
@@ -428,7 +440,12 @@ local state_machine = StateMachine.create({
                 queue_on_teleport(string.format(chooseSlot, game.JobId, slot or "A"))
 
                 local get_score = services.ReplicatedStorage:WaitForChild("Requests"):WaitForChild("GetScore");
-                get_score.OnClientEvent:Connect(function(v)
+                local score_scope = farm_scope;
+                local score_recorded = false;
+                local score_connection = get_score.OnClientEvent:Connect(function(v)
+                    if score_scope and not score_scope.active then return end;
+                    if score_scope and score_recorded then return end;
+                    if score_scope then score_recorded = true end;
                     local last_wiped_at = persistent_data:get("wiped_at", nil);
                     local wiped_at = tick();
                     persistent_data:set("echoes_gained", persistent_data:get("echoes_gained", 0) + (v and typeof(v) == "table" and v.Echoes or 0))
@@ -474,6 +491,7 @@ local state_machine = StateMachine.create({
                     end);
                     get_score:FireServer();
                 end);
+                if farm_scope then farm_scope:track(score_connection) end;
 
                 pcall(function()
                     for _, anim in game:GetService("ReplicatedStorage").Assets.Anims.Mobs.Monky:GetChildren() do
@@ -756,4 +774,15 @@ struct = automation_struct:construct({
     end
 })
 
+function struct:bind_scope(scope)
+    farm_scope = scope;
+    self.scope = scope;
+    task = scope.task;
+    Tween = scope.Tween;
+    server_utility = scope.servers;
+    persistent_data = scope.store;
+    self.state_machine.current = "idle";
+    self.state_machine.asyncState = "none";
+    self.state_machine.currentTransitioningEvent = nil;
+end;
 return struct;

@@ -1,0 +1,8 @@
+# Runtime state and credentials belong in the executor workspace, never Git.
+/Arteria/
+/Frutiger/
+/Project Rain/
+.env
+.env.*
+!.env.example
+*.log

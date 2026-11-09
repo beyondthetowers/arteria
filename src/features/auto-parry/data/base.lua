@@ -11,8 +11,8 @@
 -- usa 1, che e' la velocita' normale di un'animazione: il calcolo torna
 -- sensato invece di diventare infinito.
 local function speed_of(track)
-    local s = track and speed_of(track);
-    if type(s) ~= "number" or s ~= s or s < 1e-6 then
+    local s = track and track.Speed;
+    if type(s) ~= "number" or s ~= s or s < 1e-6 or s == math.huge then
         return 1;
     end;
     return s;

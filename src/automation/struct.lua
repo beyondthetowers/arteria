@@ -98,6 +98,8 @@ automation_struct.run = LPH_NO_VIRTUALIZE(function(self)
 end);
 
 automation_struct.create_character = function(self)
+    local task = self.scope and self.scope.task or task;
+    local persistent_data = self.scope and self.scope.store or persistent_data;
     local options = self.character_creator_handler_opts
 	local requests = services.ReplicatedStorage:WaitForChild("Requests")
 	local characterCreator = requests:WaitForChild("CharacterCreator")
@@ -194,4 +196,4 @@ automation_struct.create_character = function(self)
     local_player.character:WaitForChild("Humanoid")
 end
  
-return automation_struct; 
+return automation_struct;

@@ -1,4 +1,7 @@
 return LPH_NO_VIRTUALIZE(function()
+    if aztup and aztup.brand == "arteria" then
+        return require("@src/arteria/player_esp")
+    end
     local PlayerESPBillboard = require("@src/utility/player_esp_inst");
     local maid = require("@src/utility/maid");
     local stored_damage_registry = require("@src/utility/stored_damage_registry");

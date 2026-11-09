@@ -72,7 +72,6 @@ genv["inline_asset_b96"] = function(path)
     end;
 
     local EncodingService = game:GetService("EncodingService");
-    local HttpService     = game:GetService("HttpService");
 
     local relative = path:gsub("^@assets/", "");
 
@@ -91,11 +90,10 @@ genv["inline_asset_b96"] = function(path)
         end;
     end;
 
-    -- Nothing on disk: return a valid empty payload so the writefile calls in
-    -- init.lua succeed instead of erroring out uncaught.
+    -- An empty payload is not a compressed asset. Fail at the missing file,
+    -- rather than hiding the cause behind a later decompression error.
     if not raw then
-        warn(string.format("[init] asset not found on disk: %s", relative));
-        raw = "";
+        error(string.format("[init] asset not found on disk or in bundle: %s", relative), 2);
     end;
 
     local ok, encoded = pcall(function()
@@ -103,12 +101,11 @@ genv["inline_asset_b96"] = function(path)
             buffer.fromstring(raw),
             Enum.CompressionAlgorithm.Zstd
         );
-        return HttpService:Base64Encode(buffer.tostring(compressed));
+        return buffer.tostring(EncodingService:Base64Encode(compressed));
     end);
 
     if not ok then
-        warn(string.format("[init] failed to encode asset %s: %s", relative, tostring(encoded)));
-        return "";
+        error(string.format("[init] failed to encode asset %s: %s", relative, tostring(encoded)), 2);
     end;
 
     return encoded;

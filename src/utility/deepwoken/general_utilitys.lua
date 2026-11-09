@@ -314,6 +314,7 @@ function general:is_friends_with_sync(plr)
     return general.friends[plr.UserId]
 end
 
+local owner_runtime = aztup;
 task.spawn(function() 
     for _, plr in services.Players:GetPlayers() do
         pcall(function() 
@@ -324,14 +325,15 @@ task.spawn(function()
         end)
     end
 
-    services.Players.PlayerAdded:Connect(function(plr)
+    if owner_runtime.alive == false then return end;
+    owner_runtime.maid:give_task(services.Players.PlayerAdded:Connect(function(plr)
         if general.friends[plr.UserId] ~= nil then return end
 
         local is_friends = local_player.instance:IsFriendsWithAsync(plr.UserId);
         if not is_friends then return end
 
         general.friends[plr.UserId] = local_player.instance:IsFriendsWithAsync(plr.UserId);
-    end);
+    end));
 end)
 
 return general

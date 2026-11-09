@@ -10,7 +10,7 @@ local trace = require("@src/utility/trace")
 -- dicono quante volte al secondo passa ciascun percorso.
 local n_run, n_hb, n_desc, n_anim = 0, 0, 0, 0;
 
-task.spawn(function()
+local rate_thread = task.spawn(function()
     local last = tick();
     while true do
         task.wait(1);
@@ -23,6 +23,8 @@ task.spawn(function()
         end;
     end;
 end);
+-- Arteria unloads/reinjects without leaving the diagnostic loop behind.
+aztup.maid:give_task(function() pcall(task.cancel, rate_thread) end);
 
 -- Divisione sicura per track.Speed (vedi base.lua).
 -- track.Speed puo' essere 0, e x/0 da' infinito: quel valore si propaga fino a
