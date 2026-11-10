@@ -425,9 +425,19 @@ end;
         -- the callers depend on getting the handler back. An early return would
         -- hand them nil -- a worse bug than the one being fixed.
         if self.animator then
+            -- xpcall: an unprotected error here fires on every AnimationPlayed
+            -- event (hundreds per second in combat) and floods the console
+            -- until the client stalls. One warning per track is enough.
             self.played = self.animator.AnimationPlayed:Connect(profiler.wrap("animator_handler::run", function(track)
                 n_anim += 1;
-                self:run(track);
+                local ok, err = xpcall(self.run, debug.traceback, self, track);
+                if not ok and track then
+                    local now = tick();
+                    if now - (self.run_error_at or 0) >= 5 then
+                        self.run_error_at = now;
+                        warn("[arteria] auto-parry handler: " .. tostring(err));
+                    end
+                end
             end));
 
             aztup.maid[services.HttpService:GenerateGUID(false)] = self.played;
@@ -890,6 +900,7 @@ end
 end
 
     local function fire_feint(hold_time)
+        if not local_player.character then return false end
         local character_handler = local_player.character:FindFirstChild("CharacterHandler");
         local feint_release = character_handler and character_handler:FindFirstChild("FeintRelease", true);
         local feint_click = KeyHandler:get_key("FeintClick");
@@ -1048,6 +1059,7 @@ end
 
 
     
+    local feint_error_at = 0;
     local function process_actions(self, track, data, pot_name, to_evaluate_actions, action_type, blocked_bi, blocked_af)
         local current_rtt = Latency:get_ping()
         local alotted = 0
@@ -1060,6 +1072,10 @@ end
 
         local root = self.entity:FindFirstChild("HumanoidRootPart")
         if not root then
+            return
+        end
+        -- process_actions yields (task.wait); root_part may be nil after respawn.
+        if not local_player.root_part then
             return
         end
 
@@ -1190,6 +1206,11 @@ end;
             local notifs = {};
             if wait_time > 0 and wait_time == wait_time and wait_time < 60000 then
                     task.delay(wait_time - (1 / 15), function()
+                        -- Deferred callbacks run even after respawn/despawn; the
+                        -- character, entity, humanoid and track can all be nil
+                        -- or destroyed by then. xpcall keeps one bad tick from
+                        -- spamming the console.
+                        local ok, err = xpcall(function()
                         if aztup.flags.auto_feint and not blocked_af then
                             if check_action_preconditions_auto_feint(self, track, action, data, action_type, name, index, in_hitbox) then
                                 return                            
@@ -1229,6 +1250,14 @@ end;
 
                             fire_feint();
                         end;
+                        end, debug.traceback);
+                        if not ok then
+                            local now = tick();
+                            if now - (feint_error_at or 0) >= 5 then
+                                feint_error_at = now;
+                                warn("[arteria] auto-feint tick: " .. tostring(err));
+                            end
+                        end
                     end);
 
                 task.wait(wait_time)
@@ -1406,7 +1435,8 @@ end;
     
     local function log_info_if_enabled(self, track)
         local root = self.entity and self.entity:FindFirstChild("HumanoidRootPart");
-        if not (aztup.flags.info_logger and root and local_player.root_part and self.entity.Name ~= local_player.character.Name) then
+        local my_name = local_player.character and local_player.character.Name
+        if not (aztup.flags.info_logger and root and local_player.root_part and my_name and self.entity.Name ~= my_name) then
             return        
         end
 
@@ -1457,6 +1487,12 @@ end;
 
         local data, pot_name = lookup_timing_data(id);
 
+        -- lookup_timing_data yields (GetProductInfo); the character or entity
+        -- can despawn during that yield. Re-validate before any member access.
+        if not self.entity or not self.entity.Parent then return end
+        local my_name = local_player.character and local_player.character.Name
+        if not my_name then return end
+
         log_info_if_enabled(self, track);
 
         if not data or tasks >= (aztup.flags.task_concurrency or 25) then
@@ -1488,7 +1524,7 @@ data = table.clone(data);
         local str = pot_name or data.name or data.actions and data.actions[1] and data.actions[1].name;
         if str and aztup_options.blocked_timings.Value[str] then return end
     
-        if self.entity.Name == local_player.character.Name then
+        if my_name and self.entity.Name == my_name then
 
 
             local action_type = data.action_type or "Undefined";

@@ -93,7 +93,8 @@ end;
 
 local asset_id = require("@src/utility/asset_id")
 function anti_ap_breaker:handle_priority_hiding(defender, track)
-    local humanoid = defender.entity:FindFirstChild("Humanoid");
+    local humanoid = defender.entity and defender.entity:FindFirstChild("Humanoid");
+    if not humanoid then return false end
     local hidden_count = 0;
     local highest_priority = 1000;
     
