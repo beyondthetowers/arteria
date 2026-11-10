@@ -438,7 +438,8 @@ function UI.mount(runtime)
         end)
         key.Font = F.mono
 
-        local toggle = button(frame, "Toggle", "OFF", function()
+        local is_action = entry.kind == "action"
+        local toggle = button(frame, "Toggle", is_action and "TP /" or "OFF", function()
             if can_edit(entry.id) then runtime:set(entry.id, not runtime.flags[entry.id]) end
         end)
         toggle.Font = F.mono
@@ -739,14 +740,20 @@ function UI.mount(runtime)
                 and (query == "" or string.find(string.lower(item.entry.label), query, 1, true) ~= nil)
             if item.frame.Visible then shown += 1 end
 
-            item.toggle.Text = enabled and "ON /" or "OFF"
-            item.toggle:SetAttribute("Inverted", enabled)
-            if item.last_enabled ~= nil and item.last_enabled ~= enabled then
-                animate(item.toggle, { BackgroundColor3 = enabled and C.neon or C.surface, TextColor3 = enabled and C.ink or C.text }, theme.motion.hover)
-            elseif item.last_enabled == nil then
-                item.toggle.BackgroundColor3, item.toggle.TextColor3 = enabled and C.neon or C.surface, enabled and C.ink or C.text
+            if item.entry.kind == "action" then
+                item.toggle.Text = "TP /"
+                item.toggle:SetAttribute("Inverted", false)
+                item.toggle.BackgroundColor3, item.toggle.TextColor3 = C.surface, C.neon
+            else
+                item.toggle.Text = enabled and "ON /" or "OFF"
+                item.toggle:SetAttribute("Inverted", enabled)
+                if item.last_enabled ~= nil and item.last_enabled ~= enabled then
+                    animate(item.toggle, { BackgroundColor3 = enabled and C.neon or C.surface, TextColor3 = enabled and C.ink or C.text }, theme.motion.hover)
+                elseif item.last_enabled == nil then
+                    item.toggle.BackgroundColor3, item.toggle.TextColor3 = enabled and C.neon or C.surface, enabled and C.ink or C.text
+                end
+                item.last_enabled = enabled
             end
-            item.last_enabled = enabled
 
             item.toggle.Active, item.key.Active = can_edit(id), can_edit(id)
             item.key.Text = capture == id and "…" or (bindings[id] and bindings[id].Name or "—")

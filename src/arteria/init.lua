@@ -78,6 +78,27 @@ function runtime:set(id, enabled)
         self.refresh()
         return
     end
+    if entry.kind == "action" then
+        self.busy = true
+        self.refresh()
+        local ok, err = pcall(function()
+            compat.prepare(self)
+            local action_fn = require(entry.path)
+            if type(action_fn) == "function" then
+                action_fn()
+            elseif type(action_fn) == "table" and type(action_fn.run) == "function" then
+                action_fn:run()
+            end
+        end)
+        self.busy = false
+        if not ok then
+            self.errors[id] = tostring(err)
+            warn("[arteria] " .. id .. ": " .. tostring(err))
+        end
+        self.flags[id] = false
+        self.refresh()
+        return
+    end
     local needs_observers = entry.kind == "parry" or entry.kind == "parry-flag" or entry.kind == "observer"
     if enabled and entry.kind ~= "flag" and (not self.features[id] or needs_observers and not self.observers_loaded) then
         self.busy = true

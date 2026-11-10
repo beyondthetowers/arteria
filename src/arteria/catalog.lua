@@ -111,6 +111,12 @@ add("World", "ap_breaker", "AP breaker", "@src/features/exploits/ap_breaker", {
     number("ap_breaker_intensity", "Intensity", 4, 1, 500),
 }, "observer")
 add("World", "fake_void", "Fake void", "@src/features/qol/fake_void", nil, nil, "Depths only · uses no-kill-bricks dependency")
+add("World", "tp_eastern", "Teleport to Eastern", "@src/features/buttons/teleports/eastern", nil, "action", "Navigates to the Eastern Luminant realm gate")
+add("World", "tp_depths", "Teleport to Depths", "@src/features/buttons/teleports/depths", nil, "action", "Moves to the Depths entrance pit")
+add("World", "tp_etrean", "Teleport to Etrean", "@src/features/buttons/teleports/etrean", nil, "action", "Navigates to the Etrean Luminant realm gate")
+add("World", "tp_trial", "Teleport to Trial", "@src/features/buttons/teleports/trial", nil, "action", "Unequips gear and moves to Trial of One entrance")
+add("World", "tp_voidheart", "Teleport to Voidheart", "@src/features/buttons/teleports/voidheart", nil, "action", "Navigates to the Voidheart warp gate")
+add("World", "tp_floor", "Teleport to Floor", "@src/features/buttons/tp_to_floor", nil, "action", "Raycasts down to snap safely to the nearest floor")
 
 -- Removals
 add("Removals", "no_fall", "No fall damage", "@src/features/removals/no_fall")
