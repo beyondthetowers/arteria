@@ -104,7 +104,7 @@ function anti_ap_breaker:handle_priority_hiding(defender, track)
         if track.Priority.Value >= other_track.Priority.Value then continue end;
         if other_track.WeightCurrent <= track.WeightCurrent / 2 then continue end
         if other_track.WeightTarget <= 0.3 then continue end
-        if other_speed_of(track) == 0 and other_track.TimePosition >= track.Length - 0.01 or other_track.TimePosition <= 0.01 then continue end;
+        if speed_of(track) == 0 and other_track.TimePosition >= track.Length - 0.01 or other_track.TimePosition <= 0.01 then continue end;
         if not asset_id.get_id(other_track.Animation.AnimationId) then continue end
         if self:final_check(defender, other_track, true) then continue end
         hidden_count += 1;
