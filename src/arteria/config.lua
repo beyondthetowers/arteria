@@ -64,7 +64,7 @@ end
 function Config:validate(data)
     assert(type(data) == "table" and data.version == 1, "Unsupported or invalid profile format")
     assert(type(data.flags) == "table" and type(data.options) == "table" and type(data.bindings) == "table", "Incomplete profile")
-    local result = { flags = {}, options = {}, bindings = {}, ui_key = key(data.ui_key), reduce_motion = data.reduce_motion == true }
+    local result = { flags = {}, options = {}, bindings = {}, ui_key = key(data.ui_key), reduce_motion = data.reduce_motion == true, resets = 0 }
     assert(result.ui_key, "Invalid UI key")
     local used = { [result.ui_key.Name] = true }
     for _, entry in ipairs(self.runtime.catalog.entries) do
@@ -80,12 +80,23 @@ function Config:validate(data)
         for _, option in ipairs(entry.settings) do
             local value = data.options[option.id]
             if value == nil then value = option.value end
+            local valid = true
             if option.values then
-                assert(table.find(option.values, value), "Invalid option: " .. option.id)
+                -- A choice saved by an older build may hold a legacy value
+                -- (e.g. a boolean where the schema now expects a string).
+                -- Reset to the default instead of aborting the whole load.
+                valid = table.find(option.values, value) ~= nil
             else
-                assert(type(value) == "number" and value == value and math.abs(value) < math.huge, "Invalid number: " .. option.id)
-                value = math.clamp(value, option.low, option.high)
-                if option.id == "min_speed_mult" or option.id == "max_speed_mult" then value = math.floor(value) end
+                if not (type(value) == "number" and value == value and math.abs(value) < math.huge) then
+                    valid = false
+                else
+                    value = math.clamp(value, option.low, option.high)
+                    if option.id == "min_speed_mult" or option.id == "max_speed_mult" then value = math.floor(value) end
+                end
+            end
+            if not valid then
+                value = option.value
+                result.resets += 1
             end
             result.options[option.id] = value
         end
@@ -131,6 +142,7 @@ function Config:apply(payload, restore_flags, label)
         end
     end
     self.message = "Loaded / " .. (label or "session") .. (restore_flags and " · saved toggles applied" or " · settings and binds only")
+        .. (data.resets > 0 and (" · " .. data.resets .. " legacy option(s) reset to default") or "")
         .. (failed > 0 and (" · " .. failed .. " unavailable feature(s)") or "")
     if runtime.refresh then runtime.refresh() end
 end

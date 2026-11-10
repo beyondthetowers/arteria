@@ -63,15 +63,25 @@ assert(not pcall(config.load,config,"bad"),"duplicate bind accepted")
 assert(runtime.bindings==reference and runtime.bindings.fly==Enum.KeyCode.F,"invalid load mutates nothing")
 bad=clone(snapshot);bad.options.fly_speed=math.huge
 files["Arteria/Configs/profile-bad.json"]=http:JSONEncode(bad)
-assert(not pcall(config.load,config,"bad"),"nonfinite number accepted")
+assert(pcall(config.load,config,"bad"),"nonfinite number must not abort load")
+assert(runtime.flags.fly_speed==60,"nonfinite number reset to default")
+bad=clone(snapshot);bad.options.walk_speed=999999
+assert(config:validate(bad).options.walk_speed==250,"numeric limit validation")
+bad=clone(snapshot);bad.options.fly_speed="fast"
+files["Arteria/Configs/profile-bad.json"]=http:JSONEncode(bad)
+assert(pcall(config.load,config,"bad"),"wrong-type number must not abort load")
+assert(runtime.flags.fly_speed==60,"wrong-type number reset to default")
+-- legacy build compatibility: a boolean where the schema now expects a choice string
+bad=clone(snapshot);bad.options.fly_speed=nil;bad.options["auto_feint"]=true
+files["Arteria/Configs/profile-bad.json"]=http:JSONEncode(bad)
+local ok_load=pcall(config.load,config,"bad")
+assert(ok_load,"legacy boolean choice must not abort load")
 bad=clone(snapshot);bad.ui_key="V"
 assert(not pcall(config.validate,config,bad),"reserved menu key accepted")
 bad=clone(snapshot);bad.bindings.fly="NotARealKey"
 assert(not pcall(config.validate,config,bad),"invalid enum name accepted")
 bad=clone(snapshot);bad.version=2
 assert(not pcall(config.validate,config,bad),"unknown version accepted")
-bad=clone(snapshot);bad.options.walk_speed=999999
-assert(config:validate(bad).options.walk_speed==250,"numeric limit validation")
 runtime.echo.running=true
 assert(not pcall(config.load,config,"one"),"load while farm owns controls accepted")
 runtime.echo.running=false
