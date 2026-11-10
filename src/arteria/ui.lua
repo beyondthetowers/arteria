@@ -66,6 +66,65 @@ function UI.mount(runtime)
         table.clear(active_tweens)
     end
 
+    -- Real optical neon bloom for buttons, badges and indicators
+    local function add_neon_bloom(parent, color, layers)
+        layers = layers or {
+            { size = 4, alpha = 0.74 },
+            { size = 8, alpha = 0.85 },
+            { size = 14, alpha = 0.93 },
+            { size = 22, alpha = 0.97 },
+        }
+        local bloom_frames = {}
+        for idx, layer in ipairs(layers) do
+            local glow = create("Frame", {
+                Name = "NeonBloom_" .. idx,
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                Position = UDim2.fromScale(0.5, 0.5),
+                Size = UDim2.new(1, layer.size, 1, layer.size),
+                BackgroundColor3 = color or C.neon,
+                BackgroundTransparency = layer.alpha,
+                BorderSizePixel = 0,
+                ZIndex = math.max(0, (parent.ZIndex or 1) - 1),
+                Visible = parent.Visible,
+            }, parent)
+            table.insert(bloom_frames, glow)
+        end
+        return bloom_frames
+    end
+
+    -- Real optical neon bloom aura for large titles and logos
+    local function add_text_bloom(label, color)
+        local parent = label.Parent
+        local layers = {
+            { thickness = 2, alpha = 0.45 },
+            { thickness = 5, alpha = 0.70 },
+            { thickness = 10, alpha = 0.88 },
+        }
+        local bloom_labels = {}
+        for idx, layer in ipairs(layers) do
+            local glow = create("TextLabel", {
+                Name = "TextBloom_" .. idx,
+                Text = label.Text,
+                TextSize = label.TextSize,
+                Font = label.Font,
+                TextXAlignment = label.TextXAlignment,
+                TextYAlignment = label.TextYAlignment,
+                TextTruncate = label.TextTruncate,
+                Position = label.Position,
+                Size = label.Size,
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                ZIndex = math.max(0, (label.ZIndex or 1) - 1),
+                TextColor3 = color or C.neon,
+                TextTransparency = layer.alpha,
+                TextStrokeColor3 = color or C.neon,
+                TextStrokeTransparency = layer.alpha,
+            }, parent)
+            table.insert(bloom_labels, glow)
+        end
+        return bloom_labels
+    end
+
     local function text(parent, value, size, color, font)
         return create("TextLabel", {
             BackgroundTransparency = 1,
@@ -104,13 +163,15 @@ function UI.mount(runtime)
     runtime.maid:give_task(focus_image)
 
     local function button(parent, name, label, callback)
+        local is_rail = parent and parent.Name == "Navigation"
         local control = create("TextButton", {
             Name = name,
             Text = label,
             TextSize = 13,
             Font = F.body,
-            TextColor3 = C.text,
-            BackgroundColor3 = C.surface,
+            TextColor3 = is_rail and C.muted or C.text,
+            BackgroundColor3 = is_rail and C.rail or C.surface,
+            BackgroundTransparency = is_rail and 1 or 0,
             BorderSizePixel = 0,
             AutoButtonColor = false,
             Selectable = true,
@@ -120,21 +181,24 @@ function UI.mount(runtime)
         }, parent)
         table.insert(buttons, control)
 
-        local edge = create("UIStroke", {
-            Name = "ButtonEdge",
-            Color = C.neon,
-            Transparency = 0.72,
-            Thickness = 1,
-            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-        }, control)
+        local edge, glow
+        if not is_rail then
+            edge = create("UIStroke", {
+                Name = "ButtonEdge",
+                Color = C.neon,
+                Transparency = 0.75,
+                Thickness = 1,
+                ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+            }, control)
 
-        local glow = create("UIStroke", {
-            Name = "ButtonGlow",
-            Color = C.neon,
-            Transparency = 0.96,
-            Thickness = 4,
-            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-        }, control)
+            glow = create("UIStroke", {
+                Name = "ButtonGlow",
+                Color = C.neon,
+                Transparency = 0.96,
+                Thickness = 4,
+                ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+            }, control)
+        end
 
         local press = create("UIScale", { Name = "Press", Scale = 1 }, control)
 
@@ -154,14 +218,19 @@ function UI.mount(runtime)
         local function hover(on)
             if not control.Active then return end
             local inverted = control:GetAttribute("Inverted")
-            local color = inverted and C.ink or (on and C.neon or C.text)
-            local base = control:GetAttribute("Rail") and (control:GetAttribute("Selected") and C.surface or C.rail) or C.surface
-            animate(control, {
-                TextColor3 = color,
-                BackgroundColor3 = inverted and C.neon or (on and C.line or base),
-            })
-            animate(edge, { Transparency = on and 0.12 or 0.72 })
-            animate(glow, { Transparency = on and 0.78 or 0.96 })
+            if is_rail then
+                local chosen = control:GetAttribute("Selected")
+                animate(control, { TextColor3 = chosen and C.neon or (on and C.neon or C.muted) })
+            else
+                local color = inverted and C.ink or (on and C.neon or C.text)
+                local base = C.surface
+                animate(control, {
+                    TextColor3 = color,
+                    BackgroundColor3 = inverted and C.neon or (on and C.surface_hover or base),
+                })
+                if edge then animate(edge, { Transparency = on and 0.15 or 0.75 }) end
+                if glow then animate(glow, { Transparency = on and 0.82 or 0.96 }) end
+            end
         end
         connect(control.MouseEnter, function() hover(true) end)
         connect(control.MouseLeave, function() hover(false) end)
@@ -179,7 +248,7 @@ function UI.mount(runtime)
             Font = F.mono,
             TextSize = 13,
             TextColor3 = C.text,
-            PlaceholderColor3 = C.muted,
+            PlaceholderColor3 = C.dim,
             TextXAlignment = Enum.TextXAlignment.Left,
             BackgroundColor3 = C.surface,
             BorderSizePixel = 0,
@@ -192,7 +261,7 @@ function UI.mount(runtime)
 
         local stroke = create("UIStroke", {
             Color = C.neon,
-            Transparency = 0.7,
+            Transparency = 0.75,
             Thickness = 1,
             ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
         }, control)
@@ -204,11 +273,11 @@ function UI.mount(runtime)
         }, control)
 
         connect(control.Focused, function()
-            animate(stroke, { Transparency = 0 })
-            animate(glow, { Transparency = 0.8 })
+            animate(stroke, { Transparency = 0.1 })
+            animate(glow, { Transparency = 0.82 })
         end)
         connect(control.FocusLost, function()
-            animate(stroke, { Transparency = 0.7 })
+            animate(stroke, { Transparency = 0.75 })
             animate(glow, { Transparency = 0.97 })
         end)
         return control
@@ -233,8 +302,11 @@ function UI.mount(runtime)
         Active = true,
         ClipsDescendants = true,
     }, gui)
-    create("UIStroke", { Color = C.neon, Transparency = 0.7, Thickness = 1 }, panel)
-    create("UIStroke", { Color = C.neon, Transparency = 0.97, Thickness = 6 }, panel)
+
+    -- Window Neon Bloom Glow Borders
+    create("UIStroke", { Color = C.neon, Transparency = 0.45, Thickness = 1.5 }, panel)
+    create("UIStroke", { Color = C.neon_glow, Transparency = 0.80, Thickness = 4 }, panel)
+    create("UIStroke", { Color = C.neon_glow, Transparency = 0.94, Thickness = 10 }, panel)
 
     local sidebar = create("Frame", {
         Name = "Sidebar",
@@ -250,9 +322,11 @@ function UI.mount(runtime)
         Size = UDim2.new(0, 1, 1, 0),
     }, sidebar)
 
-    local brand = text(sidebar, "ARTERIA", 27, C.text, F.heading)
-    brand.TextStrokeColor3, brand.TextStrokeTransparency = C.neon, 0.85
-    local edition = text(sidebar, "PRIVATE UTILITY / 03", 10, C.muted, F.mono)
+    local brand = text(sidebar, "ARTERIA", 28, C.neon, F.heading)
+    brand.ZIndex = 2
+    local brand_bloom = add_text_bloom(brand, C.neon)
+
+    local edition = text(sidebar, "NEON LUXURY / 04", 10, C.muted, F.mono)
 
     local sections = table.clone(runtime.catalog.sections)
     table.insert(sections, "Automation")
@@ -265,7 +339,6 @@ function UI.mount(runtime)
         BorderSizePixel = 0,
         CanvasSize = UDim2.new(),
         ScrollBarThickness = 0,
-        ScrollBarImageColor3 = C.muted,
         ScrollingDirection = Enum.ScrollingDirection.Y,
     }, sidebar)
 
@@ -273,12 +346,14 @@ function UI.mount(runtime)
     local active_pill = create("Frame", {
         Name = "ActiveIndicator",
         BackgroundColor3 = C.rail_active,
+        BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, -24, 0, 42),
+        Size = UDim2.new(1, -24, 0, 40),
         Position = UDim2.fromOffset(12, 0),
         Visible = true,
         ZIndex = 1,
     }, nav_list)
+
     local pill_neon_bar = create("Frame", {
         Name = "NeonBar",
         BackgroundColor3 = C.neon,
@@ -287,8 +362,11 @@ function UI.mount(runtime)
         Position = UDim2.fromOffset(0, 6),
         ZIndex = 2,
     }, active_pill)
-    create("UIStroke", { Color = C.neon_glow, Thickness = 2, Transparency = 0.75 }, pill_neon_bar)
-    create("UIStroke", { Color = C.line_neon, Thickness = 1, Transparency = 0.85 }, active_pill)
+    add_neon_bloom(pill_neon_bar, C.neon, {
+        { size = 4, alpha = 0.70 },
+        { size = 8, alpha = 0.85 },
+        { size = 14, alpha = 0.94 },
+    })
 
     local content = create("CanvasGroup", {
         Name = "Content",
@@ -300,7 +378,11 @@ function UI.mount(runtime)
 
     local header = create("Frame", { Name = "Header", BackgroundTransparency = 1, Active = true }, content)
     local overline = text(header, "OPERATIONS / 01", 10, C.muted, F.mono)
-    local title = text(header, "MOVEMENT", 44, C.text, F.heading)
+
+    local title = text(header, "MOVEMENT", 46, C.neon, F.heading)
+    title.ZIndex = 2
+    local title_bloom = add_text_bloom(title, C.neon)
+
     local subtitle = text(header, "Control, without excess.", 13, C.muted)
     local search = field(content, "Search", "Search the collection")
     local scroll = create("ScrollingFrame", {
@@ -373,11 +455,13 @@ function UI.mount(runtime)
     runtime.navigate_ui = page
 
     for index, section in ipairs(sections) do
-        local control = button(nav_list, "Nav" .. section, string.format("%02d   %s", index, section), function() page(section) end)
+        local control = button(nav_list, "Nav" .. section, string.format("%02d   %s", index, string.upper(section)), function() page(section) end)
         control.TextXAlignment = Enum.TextXAlignment.Left
         control:SetAttribute("Rail", true)
         control.ZIndex = 3
-        create("UIPadding", { PaddingLeft = UDim.new(0, 24) }, control)
+        control.BackgroundTransparency = 1
+        control.BackgroundColor3 = C.rail
+        create("UIPadding", { PaddingLeft = UDim.new(0, 26) }, control)
         local marker = create("Frame", {
             Name = "Marker",
             BackgroundColor3 = C.neon,
@@ -443,6 +527,11 @@ function UI.mount(runtime)
             if can_edit(entry.id) then runtime:set(entry.id, not runtime.flags[entry.id]) end
         end)
         toggle.Font = F.mono
+        toggle.ZIndex = 3
+
+        -- Real optical neon bloom for active toggle state
+        local toggle_bloom = add_neon_bloom(toggle, C.neon)
+        item.toggle_bloom = toggle_bloom
 
         local details = button(frame, "Details", "+", function()
             item.expanded = not item.expanded
@@ -494,8 +583,7 @@ function UI.mount(runtime)
         CanvasSize = UDim2.new(),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         ScrollingDirection = Enum.ScrollingDirection.Y,
-        ScrollBarThickness = 2,
-        ScrollBarImageColor3 = C.muted,
+        ScrollBarThickness = 0,
     }, content)
 
     local echo_body = create("Frame", { Name = "Cycle", BackgroundTransparency = 1, Size = UDim2.new(1, -8, 0, 510) }, echo_page)
@@ -544,15 +632,14 @@ function UI.mount(runtime)
     stop.Position, stop.Size = UDim2.new(0.5, 6, 0, 435), UDim2.new(0.5, -6, 0, 42)
     connect(slot_field:GetPropertyChangedSignal("Text"), function() runtime.refresh() end)
 
-    -- Settings Page
+    -- Settings Page (Art-directed matching preview)
     local settings_page = create("ScrollingFrame", {
         Name = "SettingsPage",
         Visible = false,
         BackgroundTransparency = 1,
         CanvasSize = UDim2.new(),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        ScrollBarThickness = 2,
-        ScrollBarImageColor3 = C.muted,
+        ScrollBarThickness = 0,
         ScrollingDirection = Enum.ScrollingDirection.Y,
     }, content)
 
@@ -565,9 +652,9 @@ function UI.mount(runtime)
     local profile_title = text(settings_body, "YOUR CONFIGURATION", 30, C.neon, F.heading)
     profile_title.Position, profile_title.Size = UDim2.fromOffset(0, 0), UDim2.new(1, 0, 0, 42)
 
-    local profile_note = text(settings_body, "1. Click or type profile name. 2. Save, Load, or Set as Autoload.\nAutoload automatically applies your saved profile on script launch.", 13, C.muted)
+    local profile_note = text(settings_body, "One-click profile selection, instant save/load, and startup autoloading.\nAutoload automatically applies your saved profile on launch.", 13, C.muted)
     profile_note.TextWrapped, profile_note.TextTruncate = true, Enum.TextTruncate.None
-    profile_note.Position, profile_note.Size = UDim2.fromOffset(0, 48), UDim2.new(1, 0, 0, 50)
+    profile_note.Position, profile_note.Size = UDim2.fromOffset(0, 48), UDim2.new(1, 0, 0, 48)
 
     local chips_label = text(settings_body, "SAVED PROFILES (CLICK TO SELECT)", 10, C.neon, F.mono)
     chips_label.Position, chips_label.Size = UDim2.fromOffset(0, 102), UDim2.new(1, 0, 0, 18)
@@ -585,7 +672,7 @@ function UI.mount(runtime)
     }, settings_body)
     create("UIListLayout", {
         FillDirection = Enum.FillDirection.Horizontal,
-        Padding = UDim.new(0, 6),
+        Padding = UDim.new(0, 8),
         SortOrder = Enum.SortOrder.LayoutOrder,
     }, chips_scroll)
 
@@ -613,6 +700,8 @@ function UI.mount(runtime)
     save.Position, save.Size = UDim2.fromOffset(0, 238), UDim2.new(0.32, -4, 0, 42)
     save:SetAttribute("Inverted", true)
     save.BackgroundColor3, save.TextColor3 = C.neon, C.ink
+    save.ZIndex = 3
+    add_neon_bloom(save, C.neon)
 
     local load = button(settings_body, "LoadProfile", "LOAD", function()
         config_action(function() runtime.config:load(profile_name.Text, restore_flags) end)
@@ -624,6 +713,7 @@ function UI.mount(runtime)
         config_action(function() runtime.config:delete(profile_name.Text); delete_armed = nil end)
     end)
     delete.Position, delete.Size = UDim2.new(0.66, 6, 0, 238), UDim2.new(0.34, -6, 0, 42)
+    delete.TextColor3 = C.alert
 
     local autoload_btn = button(settings_body, "AutoloadButton", "SET AS AUTOLOAD", function()
         config_action(function()
@@ -637,41 +727,30 @@ function UI.mount(runtime)
     end)
     autoload_btn.Position, autoload_btn.Size = UDim2.fromOffset(0, 288), UDim2.new(0.48, -4, 0, 38)
 
-    local restore = button(settings_body, "RestoreToggles", "[ ] RESTORE FEATURE TOGGLES", function()
+    local restore = button(settings_body, "RestoreToggles", "[ ] RESTORE TOGGLES", function()
         restore_flags = not restore_flags
         runtime.refresh()
     end)
     restore.Position, restore.Size = UDim2.new(0.50, 4, 0, 288), UDim2.new(0.50, -4, 0, 38)
     restore.TextWrapped, restore.TextXAlignment = true, Enum.TextXAlignment.Left
 
-    local saved = button(settings_body, "SavedProfiles", "CYCLE PROFILES", function()
-        config_action(function()
-            local profiles = runtime.config:list()
-            if #profiles == 0 then runtime.config.message = "No saved profiles yet. Enter a name and Save."; return end
-            local current = table.find(profiles, profile_name.Text) or 0
-            profile_name.Text = profiles[current % #profiles + 1]
-        end)
-    end)
-    saved.Position, saved.Size = UDim2.fromOffset(0, 334), UDim2.new(1, 0, 0, 30)
-    saved.TextSize = 11
-
-    local config_status = text(settings_body, "", 13, C.muted)
+    local config_status = text(settings_body, "", 13, C.neon)
     config_status.TextWrapped, config_status.TextTruncate = true, Enum.TextTruncate.None
-    config_status.Position, config_status.Size = UDim2.fromOffset(0, 372), UDim2.new(1, 0, 0, 48)
-    line(settings_body, 428)
+    config_status.Position, config_status.Size = UDim2.fromOffset(0, 334), UDim2.new(1, 0, 0, 36)
+    line(settings_body, 378)
 
-    local bind_title = text(settings_body, "KEYBINDS / CLICK TO REBIND", 11, C.muted, F.mono)
-    bind_title.Position, bind_title.Size = UDim2.fromOffset(0, 442), UDim2.new(1, 0, 0, 24)
+    local bind_title = text(settings_body, "KEYBINDS / CLICK TO REBIND", 11, C.neon, F.mono)
+    bind_title.Position, bind_title.Size = UDim2.fromOffset(0, 392), UDim2.new(1, 0, 0, 24)
 
     local ui_bind = button(settings_body, "MenuKey", "UI KEY / RIGHTSHIFT", function()
         capture = "__menu"
         runtime.refresh()
     end)
-    ui_bind.Position, ui_bind.Size = UDim2.fromOffset(0, 474), UDim2.new(1, 0, 0, 42)
+    ui_bind.Position, ui_bind.Size = UDim2.fromOffset(0, 422), UDim2.new(1, 0, 0, 42)
 
     local bind_rows = {}
     for index, entry in ipairs(runtime.catalog.entries) do
-        local y = 532 + (index - 1) * 50
+        local y = 478 + (index - 1) * 48
         local label = text(settings_body, entry.label, 14)
         label.Position, label.Size = UDim2.fromOffset(0, y), UDim2.new(1, -100, 0, 36)
         label.TextWrapped, label.TextTruncate = true, Enum.TextTruncate.None
@@ -723,6 +802,7 @@ function UI.mount(runtime)
 
         place(brand, compact and 15 or 24, 25, rail - (compact and 15 or 32), 40)
         brand.Text = compact and "A" or "ARTERIA"
+        for _, b_label in ipairs(brand_bloom) do place(b_label, compact and 15 or 24, 25, rail - (compact and 15 or 32), 40); b_label.Text = brand.Text end
         place(edition, 24, 70, rail - 30, 18); edition.Visible = not compact and height >= 480
 
         local nav_gap = math.min(46, math.max(28, (height - 180) / #sections))
@@ -730,14 +810,13 @@ function UI.mount(runtime)
         nav_list.Position, nav_list.Size = UDim2.fromOffset(0, nav_top), UDim2.new(1, 0, 0, math.max(1, height - nav_top - (compact and 60 or 118)))
         nav_list.CanvasSize = UDim2.fromOffset(0, #sections * nav_gap)
 
-        -- Update active indicator size
         active_pill.Size = UDim2.new(1, compact and -8 or -24, 0, math.min(42, nav_gap - 4))
         active_pill.Position = UDim2.fromOffset(compact and 4 or 12, (nav[selected].index - 1) * nav_gap)
 
         for section, item in pairs(nav) do
             place(item.control, compact and 4 or 12, (item.index - 1) * nav_gap, rail - (compact and 8 or 24), math.min(42, nav_gap - 4))
             local short = { Movement = "MOV", Combat = "CBT", Visuals = "VIS", World = "WRL", Removals = "REM", Automation = "AUT", Settings = "SET" }
-            item.control.Text = compact and short[section] or string.format("%02d   %s", item.index, section)
+            item.control.Text = compact and short[section] or string.format("%02d   %s", item.index, string.upper(section))
             item.control.Font = compact and F.mono or F.body
             item.control:FindFirstChild("UIPadding").PaddingLeft = UDim.new(0, compact and 12 or 26)
         end
@@ -747,7 +826,11 @@ function UI.mount(runtime)
         header.Position, header.Size = UDim2.fromOffset(pad, 0), UDim2.new(1, -pad * 2, 0, 128)
         place(overline, 0, 25, width - rail - pad * 2 - 50, 18)
         title.Position, title.Size = UDim2.fromOffset(0, 48), UDim2.new(1, 0, 0, 52)
-        title.TextSize = compact and 34 or 44
+        title.TextSize = compact and 34 or 46
+        for _, t_label in ipairs(title_bloom) do
+            t_label.Position, t_label.Size, t_label.TextSize = title.Position, title.Size, title.TextSize
+        end
+
         subtitle.Position, subtitle.Size = UDim2.fromOffset(0, 104), UDim2.new(1, 0, 0, 22)
         hide_button.Position = UDim2.new(1, 0, 0, 20)
         search.Position, search.Size = UDim2.fromOffset(pad, 148), UDim2.new(1, -pad * 2, 0, 38)
@@ -779,6 +862,7 @@ function UI.mount(runtime)
                 item.toggle.Text = "TP /"
                 item.toggle:SetAttribute("Inverted", false)
                 item.toggle.BackgroundColor3, item.toggle.TextColor3 = C.surface, C.neon
+                if item.toggle_bloom then for _, b in ipairs(item.toggle_bloom) do b.Visible = false end end
             else
                 item.toggle.Text = enabled and "ON /" or "OFF"
                 item.toggle:SetAttribute("Inverted", enabled)
@@ -786,6 +870,9 @@ function UI.mount(runtime)
                     animate(item.toggle, { BackgroundColor3 = enabled and C.neon or C.surface, TextColor3 = enabled and C.ink or C.text }, theme.motion.hover)
                 elseif item.last_enabled == nil then
                     item.toggle.BackgroundColor3, item.toggle.TextColor3 = enabled and C.neon or C.surface, enabled and C.ink or C.text
+                end
+                if item.toggle_bloom then
+                    for _, b in ipairs(item.toggle_bloom) do b.Visible = enabled end
                 end
                 item.last_enabled = enabled
             end
@@ -810,7 +897,6 @@ function UI.mount(runtime)
             item.control.BackgroundTransparency = 1
         end
 
-        -- Animate active pill to selected tab
         if nav[selected] then
             local target_y = (nav[selected].index - 1) * math.min(46, math.max(28, (panel.AbsoluteSize.Y - 180) / #sections))
             animate(active_pill, { Position = UDim2.fromOffset(compact and 4 or 12, target_y) }, theme.motion.page)
@@ -818,9 +904,11 @@ function UI.mount(runtime)
 
         local index = nav[selected] and nav[selected].index or 1
         title.Text = query ~= "" and not is_custom and "COLLECTION" or string.upper(selected)
+        for _, t_label in ipairs(title_bloom) do t_label.Text = title.Text end
+
         overline.Text = string.format("OPERATIONS / %02d", index)
         subtitle.Text = capture and "Press a key. Escape cancels. Backspace clears."
-            or (is_echo and "ECHO FARM / SOUP CYCLE" or (is_settings and "LOCAL PROFILES / KEYBINDS" or "Control, without excess."))
+            or (is_echo and "ECHO FARM / SOUP CYCLE" or (is_settings and "One-click profile selection, instant save/load, and startup autoloading." or "Control, without excess."))
 
         scroll.Visible, search.Visible, echo_page.Visible, settings_page.Visible = not is_custom, not is_custom, is_echo, is_settings
         empty.Visible = not is_custom and shown == 0
@@ -848,13 +936,14 @@ function UI.mount(runtime)
         local menu_key = runtime.ui_key or Enum.KeyCode.RightShift
         ui_bind.Text = capture == "__menu" and "UI KEY / PRESS A KEY" or ("UI KEY / " .. string.upper(menu_key.Name))
         for id, control in pairs(bind_rows) do control.Text = capture == id and "…" or (bindings[id] and bindings[id].Name or "—") end
-        saved.Text = runtime.config and #runtime.config.profiles > 0 and ("NEXT SAVED PROFILE / " .. #runtime.config.profiles) or "NO SAVED PROFILES / SAVE ONE FIRST"
+
         delete.Text = delete_armed == profile_name.Text and delete_armed ~= nil and "CONFIRM" or "DELETE"
-        restore.Text = (restore_flags and "[X] " or "[ ] ") .. "RESTORE SAVED FEATURE TOGGLES"
+        delete.TextColor3 = C.alert
+        restore.Text = (restore_flags and "[X] " or "[ ] ") .. "RESTORE TOGGLES"
 
         local auto_name, auto_flags = runtime.config and runtime.config:get_autoload()
         if auto_name and auto_name == profile_name.Text then
-            autoload_btn.Text = "AUTOLOAD ON LAUNCH: ON"
+            autoload_btn.Text = "AUTOLOAD: ON (★)"
             autoload_btn:SetAttribute("Inverted", true)
             autoload_btn.BackgroundColor3, autoload_btn.TextColor3 = C.neon, C.ink
         else
@@ -872,7 +961,7 @@ function UI.mount(runtime)
                     delete_armed = nil
                     runtime.refresh()
                 end)
-                chip.Size = UDim2.fromOffset(88, 32)
+                chip.Size = UDim2.fromOffset(92, 32)
                 chip.Font = F.mono
                 chip.TextSize = 11
                 table.insert(chip_buttons, chip)
@@ -889,11 +978,7 @@ function UI.mount(runtime)
         end
 
         local message = runtime.config and runtime.config.message or "Configuration storage is unavailable."
-        if message ~= config_status.Text and is_settings and not runtime.reduce_motion and not system_reduced then
-            config_status.TextTransparency = 0.4
-            animate(config_status, { TextTransparency = 0 }, theme.motion.page)
-        end
-        config_status.Text = message
+        config_status.Text = "STATUS: " .. message
 
         layout_rows()
     end
