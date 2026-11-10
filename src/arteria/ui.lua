@@ -559,21 +559,43 @@ function UI.mount(runtime)
     local settings_body = create("Frame", {
         Name = "Profiles",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, -8, 0, 550 + #runtime.catalog.entries * 50),
+        Size = UDim2.new(1, -8, 0, 560 + #runtime.catalog.entries * 50),
     }, settings_page)
 
     local profile_title = text(settings_body, "YOUR CONFIGURATION", 30, C.neon, F.heading)
     profile_title.Position, profile_title.Size = UDim2.fromOffset(0, 0), UDim2.new(1, 0, 0, 42)
 
-    local profile_note = text(settings_body, "1. Name and Save. 2. Browse and Load.\nLoads settings and keybinds by default.\nFarm consent is never saved.", 14, C.muted)
+    local profile_note = text(settings_body, "1. Click or type profile name. 2. Save, Load, or Set as Autoload.\nAutoload automatically applies your saved profile on script launch.", 13, C.muted)
     profile_note.TextWrapped, profile_note.TextTruncate = true, Enum.TextTruncate.None
-    profile_note.Position, profile_note.Size = UDim2.fromOffset(0, 48), UDim2.new(1, 0, 0, 76)
+    profile_note.Position, profile_note.Size = UDim2.fromOffset(0, 48), UDim2.new(1, 0, 0, 50)
 
-    local name_label = text(settings_body, "PROFILE NAME", 11, C.neon, F.mono)
-    name_label.Position, name_label.Size = UDim2.fromOffset(0, 130), UDim2.new(1, 0, 0, 18)
+    local chips_label = text(settings_body, "SAVED PROFILES (CLICK TO SELECT)", 10, C.neon, F.mono)
+    chips_label.Position, chips_label.Size = UDim2.fromOffset(0, 102), UDim2.new(1, 0, 0, 18)
+
+    local chips_scroll = create("ScrollingFrame", {
+        Name = "ProfileChips",
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Position = UDim2.fromOffset(0, 124),
+        Size = UDim2.new(1, 0, 0, 36),
+        CanvasSize = UDim2.new(),
+        AutomaticCanvasSize = Enum.AutomaticSize.X,
+        ScrollBarThickness = 0,
+        ScrollingDirection = Enum.ScrollingDirection.X,
+    }, settings_body)
+    create("UIListLayout", {
+        FillDirection = Enum.FillDirection.Horizontal,
+        Padding = UDim.new(0, 6),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, chips_scroll)
+
+    local chip_buttons = {}
+
+    local name_label = text(settings_body, "ACTIVE PROFILE NAME", 10, C.neon, F.mono)
+    name_label.Position, name_label.Size = UDim2.fromOffset(0, 168), UDim2.new(1, 0, 0, 18)
 
     local profile_name = field(settings_body, "ProfileName", "e.g. combat or movement")
-    profile_name.Position, profile_name.Size = UDim2.fromOffset(0, 154), UDim2.new(1, 0, 0, 42)
+    profile_name.Position, profile_name.Size = UDim2.fromOffset(0, 190), UDim2.new(1, 0, 0, 40)
 
     local delete_armed, restore_flags = nil, false
     local function config_action(callback)
@@ -585,7 +607,44 @@ function UI.mount(runtime)
         runtime.refresh()
     end
 
-    local saved = button(settings_body, "SavedProfiles", "SAVED / NONE", function()
+    local save = button(settings_body, "SaveProfile", "SAVE / UPDATE", function()
+        config_action(function() runtime.config:save(profile_name.Text) end)
+    end)
+    save.Position, save.Size = UDim2.fromOffset(0, 238), UDim2.new(0.32, -4, 0, 42)
+    save:SetAttribute("Inverted", true)
+    save.BackgroundColor3, save.TextColor3 = C.neon, C.ink
+
+    local load = button(settings_body, "LoadProfile", "LOAD", function()
+        config_action(function() runtime.config:load(profile_name.Text, restore_flags) end)
+    end)
+    load.Position, load.Size = UDim2.new(0.33, 2, 0, 238), UDim2.new(0.32, -4, 0, 42)
+
+    local delete = button(settings_body, "DeleteProfile", "DELETE", function()
+        if delete_armed ~= profile_name.Text then delete_armed = profile_name.Text; runtime.refresh(); return end
+        config_action(function() runtime.config:delete(profile_name.Text); delete_armed = nil end)
+    end)
+    delete.Position, delete.Size = UDim2.new(0.66, 6, 0, 238), UDim2.new(0.34, -6, 0, 42)
+
+    local autoload_btn = button(settings_body, "AutoloadButton", "SET AS AUTOLOAD", function()
+        config_action(function()
+            local auto_name = runtime.config:get_autoload()
+            if auto_name == profile_name.Text then
+                runtime.config:clear_autoload()
+            else
+                runtime.config:set_autoload(profile_name.Text, restore_flags)
+            end
+        end)
+    end)
+    autoload_btn.Position, autoload_btn.Size = UDim2.fromOffset(0, 288), UDim2.new(0.48, -4, 0, 38)
+
+    local restore = button(settings_body, "RestoreToggles", "[ ] RESTORE FEATURE TOGGLES", function()
+        restore_flags = not restore_flags
+        runtime.refresh()
+    end)
+    restore.Position, restore.Size = UDim2.new(0.50, 4, 0, 288), UDim2.new(0.50, -4, 0, 38)
+    restore.TextWrapped, restore.TextXAlignment = true, Enum.TextXAlignment.Left
+
+    local saved = button(settings_body, "SavedProfiles", "CYCLE PROFILES", function()
         config_action(function()
             local profiles = runtime.config:list()
             if #profiles == 0 then runtime.config.message = "No saved profiles yet. Enter a name and Save."; return end
@@ -593,50 +652,26 @@ function UI.mount(runtime)
             profile_name.Text = profiles[current % #profiles + 1]
         end)
     end)
-    saved.Position, saved.Size = UDim2.fromOffset(0, 204), UDim2.new(1, 0, 0, 36)
+    saved.Position, saved.Size = UDim2.fromOffset(0, 334), UDim2.new(1, 0, 0, 30)
+    saved.TextSize = 11
 
-    local save = button(settings_body, "SaveProfile", "SAVE", function()
-        config_action(function() runtime.config:save(profile_name.Text) end)
-    end)
-    save.Position, save.Size = UDim2.fromOffset(0, 252), UDim2.new(1 / 3, -6, 0, 42)
-    save:SetAttribute("Inverted", true)
-    save.BackgroundColor3, save.TextColor3 = C.neon, C.ink
-
-    local load = button(settings_body, "LoadProfile", "LOAD", function()
-        config_action(function() runtime.config:load(profile_name.Text, restore_flags) end)
-    end)
-    load.Position, load.Size = UDim2.new(1 / 3, 3, 0, 252), UDim2.new(1 / 3, -6, 0, 42)
-
-    local delete = button(settings_body, "DeleteProfile", "DELETE", function()
-        if delete_armed ~= profile_name.Text then delete_armed = profile_name.Text; runtime.refresh(); return end
-        config_action(function() runtime.config:delete(profile_name.Text); delete_armed = nil end)
-    end)
-    delete.Position, delete.Size = UDim2.new(2 / 3, 6, 0, 252), UDim2.new(1 / 3, -6, 0, 42)
-
-    local restore = button(settings_body, "RestoreToggles", "[ ] RESTORE SAVED FEATURE TOGGLES", function()
-        restore_flags = not restore_flags
-        runtime.refresh()
-    end)
-    restore.Position, restore.Size = UDim2.fromOffset(0, 304), UDim2.new(1, 0, 0, 40)
-    restore.TextWrapped, restore.TextXAlignment = true, Enum.TextXAlignment.Left
-
-    local config_status = text(settings_body, "", 14, C.muted)
+    local config_status = text(settings_body, "", 13, C.muted)
     config_status.TextWrapped, config_status.TextTruncate = true, Enum.TextTruncate.None
-    config_status.Position, config_status.Size = UDim2.fromOffset(0, 354), UDim2.new(1, 0, 0, 60)
-    line(settings_body, 430)
+    config_status.Position, config_status.Size = UDim2.fromOffset(0, 372), UDim2.new(1, 0, 0, 48)
+    line(settings_body, 428)
 
     local bind_title = text(settings_body, "KEYBINDS / CLICK TO REBIND", 11, C.muted, F.mono)
-    bind_title.Position, bind_title.Size = UDim2.fromOffset(0, 444), UDim2.new(1, 0, 0, 24)
+    bind_title.Position, bind_title.Size = UDim2.fromOffset(0, 442), UDim2.new(1, 0, 0, 24)
 
     local ui_bind = button(settings_body, "MenuKey", "UI KEY / RIGHTSHIFT", function()
         capture = "__menu"
         runtime.refresh()
     end)
-    ui_bind.Position, ui_bind.Size = UDim2.fromOffset(0, 480), UDim2.new(1, 0, 0, 42)
+    ui_bind.Position, ui_bind.Size = UDim2.fromOffset(0, 474), UDim2.new(1, 0, 0, 42)
 
     local bind_rows = {}
     for index, entry in ipairs(runtime.catalog.entries) do
-        local y = 538 + (index - 1) * 50
+        local y = 532 + (index - 1) * 50
         local label = text(settings_body, entry.label, 14)
         label.Position, label.Size = UDim2.fromOffset(0, y), UDim2.new(1, -100, 0, 36)
         label.TextWrapped, label.TextTruncate = true, Enum.TextTruncate.None
@@ -816,6 +851,42 @@ function UI.mount(runtime)
         saved.Text = runtime.config and #runtime.config.profiles > 0 and ("NEXT SAVED PROFILE / " .. #runtime.config.profiles) or "NO SAVED PROFILES / SAVE ONE FIRST"
         delete.Text = delete_armed == profile_name.Text and delete_armed ~= nil and "CONFIRM" or "DELETE"
         restore.Text = (restore_flags and "[X] " or "[ ] ") .. "RESTORE SAVED FEATURE TOGGLES"
+
+        local auto_name, auto_flags = runtime.config and runtime.config:get_autoload()
+        if auto_name and auto_name == profile_name.Text then
+            autoload_btn.Text = "AUTOLOAD ON LAUNCH: ON"
+            autoload_btn:SetAttribute("Inverted", true)
+            autoload_btn.BackgroundColor3, autoload_btn.TextColor3 = C.neon, C.ink
+        else
+            autoload_btn.Text = auto_name and ("SET AS AUTOLOAD (CURRENT: " .. auto_name .. ")") or "SET AS AUTOLOAD"
+            autoload_btn:SetAttribute("Inverted", false)
+            autoload_btn.BackgroundColor3, autoload_btn.TextColor3 = C.surface, C.neon
+        end
+
+        local profiles_list = runtime.config and runtime.config.profiles or {}
+        for idx, p_name in ipairs(profiles_list) do
+            local chip = chip_buttons[idx]
+            if not chip then
+                chip = button(chips_scroll, "Chip_" .. idx, p_name, function()
+                    profile_name.Text = p_name
+                    delete_armed = nil
+                    runtime.refresh()
+                end)
+                chip.Size = UDim2.fromOffset(88, 32)
+                chip.Font = F.mono
+                chip.TextSize = 11
+                table.insert(chip_buttons, chip)
+            end
+            local is_sel = profile_name.Text == p_name
+            local is_auto = auto_name == p_name
+            chip.Text = (is_auto and "★ " or "") .. p_name
+            chip:SetAttribute("Inverted", is_sel)
+            chip.BackgroundColor3, chip.TextColor3 = is_sel and C.neon or C.surface, is_sel and C.ink or (is_auto and C.neon or C.text)
+            chip.Visible = true
+        end
+        for idx = #profiles_list + 1, #chip_buttons do
+            chip_buttons[idx].Visible = false
+        end
 
         local message = runtime.config and runtime.config.message or "Configuration storage is unavailable."
         if message ~= config_status.Text and is_settings and not runtime.reduce_motion and not system_reduced then

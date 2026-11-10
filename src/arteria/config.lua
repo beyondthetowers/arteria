@@ -2,22 +2,32 @@
 local Config = {}
 Config.__index = Config
 local ROOT = "Arteria/Configs"
+local AUTOLOAD_PATH = ROOT .. "/autoload.json"
 local RESERVED = { Unknown = true, V = true, Escape = true, Tab = true, Return = true, Backspace = true }
+
 local function key(name)
     if type(name) ~= "string" or RESERVED[name] then return nil end
     local ok, value = pcall(function() return Enum.KeyCode[name] end)
     return ok and value or nil
 end
+
 local function valid_name(name)
     assert(type(name) == "string", "Enter a profile name")
     name = name:match("^%s*(.-)%s*$")
     assert(#name >= 1 and #name <= 48 and name:match("^[%w][%w _%-]*$"), "Use 1–48 letters, numbers, spaces, underscores or hyphens")
     return name
 end
+
 function Config.new(runtime)
-    return setmetatable({ runtime = runtime, message = "Profiles are local. Echo-farm consent is never saved in a config.", profiles = {} }, Config)
+    return setmetatable({
+        runtime = runtime,
+        message = "Profiles are local. Echo-farm consent is never saved in a config.",
+        profiles = {},
+    }, Config)
 end
+
 function Config:path(name) return ROOT .. "/profile-" .. valid_name(name) .. ".json" end
+
 function Config:list()
     local result = {}
     if isfolder(ROOT) then
@@ -31,10 +41,17 @@ function Config:list()
     self.profiles = result
     return result
 end
+
 function Config:snapshot()
     local runtime = self.runtime
-    local data = { version = 1, flags = {}, options = {}, bindings = {},
-        ui_key = (runtime.ui_key or Enum.KeyCode.RightShift).Name, reduce_motion = runtime.reduce_motion == true }
+    local data = {
+        version = 1,
+        flags = {},
+        options = {},
+        bindings = {},
+        ui_key = (runtime.ui_key or Enum.KeyCode.RightShift).Name,
+        reduce_motion = runtime.reduce_motion == true,
+    }
     for _, entry in ipairs(runtime.catalog.entries) do
         data.flags[entry.id] = runtime.flags[entry.id] == true
         local binding = runtime.bindings and runtime.bindings[entry.id]
@@ -43,6 +60,7 @@ function Config:snapshot()
     end
     return data
 end
+
 function Config:validate(data)
     assert(type(data) == "table" and data.version == 1, "Unsupported or invalid profile format")
     assert(type(data.flags) == "table" and type(data.options) == "table" and type(data.bindings) == "table", "Incomplete profile")
@@ -74,8 +92,10 @@ function Config:validate(data)
     end
     return result
 end
+
 function Config:save(name)
-    local path = self:path(name)
+    local vname = valid_name(name)
+    local path = self:path(vname)
     local data = self:snapshot()
     self:validate(data)
     local encoded = game:GetService("HttpService"):JSONEncode(data)
@@ -83,18 +103,19 @@ function Config:save(name)
     if not isfolder(ROOT) then makefolder(ROOT) end
     writefile(path, encoded)
     self:list()
-    self.message = "Saved / " .. valid_name(name)
+    self.message = "Saved / " .. vname
 end
+
 function Config:load(name, restore_flags)
     local raw = readfile(self:path(name))
     assert(#raw <= 1024 * 1024, "Profile exceeds the size limit")
-    self:apply(game:GetService("HttpService"):JSONDecode(raw),restore_flags,valid_name(name))
+    self:apply(game:GetService("HttpService"):JSONDecode(raw), restore_flags, valid_name(name))
 end
+
 function Config:apply(payload, restore_flags, label)
     assert(not (self.runtime.echo and self.runtime.echo.running), "Stop the echo cycle before loading a profile")
     local data = self:validate(payload)
     local runtime = self.runtime
-    -- Mutate the shared table: the mounted UI keeps this exact reference.
     runtime.bindings = runtime.bindings or {}
     table.clear(runtime.bindings)
     for id, value in pairs(data.bindings) do runtime.bindings[id] = value end
@@ -113,11 +134,59 @@ function Config:apply(payload, restore_flags, label)
         .. (failed > 0 and (" · " .. failed .. " unavailable feature(s)") or "")
     if runtime.refresh then runtime.refresh() end
 end
+
 function Config:delete(name)
-    local path = self:path(name)
+    local vname = valid_name(name)
+    local path = self:path(vname)
     assert(isfile(path), "Profile does not exist")
     delfile(path)
+    local auto_name = self:get_autoload()
+    if auto_name == vname then self:clear_autoload() end
     self:list()
-    self.message = "Deleted / " .. valid_name(name)
+    self.message = "Deleted / " .. vname
 end
+
+function Config:get_autoload()
+    if not isfile(AUTOLOAD_PATH) then return nil, false end
+    local ok, result = pcall(function()
+        return game:GetService("HttpService"):JSONDecode(readfile(AUTOLOAD_PATH))
+    end)
+    if ok and type(result) == "table" and type(result.name) == "string" and pcall(valid_name, result.name) then
+        return result.name, result.restore_flags == true
+    end
+    return nil, false
+end
+
+function Config:set_autoload(name, restore_flags)
+    local vname = valid_name(name)
+    assert(isfile(self:path(vname)), "Save the profile first before setting it as autoload")
+    if not isfolder("Arteria") then makefolder("Arteria") end
+    if not isfolder(ROOT) then makefolder(ROOT) end
+    local data = { name = vname, restore_flags = restore_flags == true }
+    writefile(AUTOLOAD_PATH, game:GetService("HttpService"):JSONEncode(data))
+    self.message = "Autoload set / " .. vname .. (restore_flags and " (with toggles)" or " (settings only)")
+    if self.runtime.refresh then self.runtime.refresh() end
+end
+
+function Config:clear_autoload()
+    if isfile(AUTOLOAD_PATH) then delfile(AUTOLOAD_PATH) end
+    self.message = "Autoload cleared."
+    if self.runtime.refresh then self.runtime.refresh() end
+end
+
+function Config:autoload()
+    local name, restore_flags = self:get_autoload()
+    if not name or not isfile(self:path(name)) then return false end
+    local ok, err = pcall(function()
+        self:load(name, restore_flags)
+    end)
+    if ok then
+        self.message = "Autoloaded / " .. name .. (restore_flags and " (with toggles)" or " (settings only)")
+        return true
+    else
+        self.message = "Autoload failed / " .. tostring(err)
+        return false
+    end
+end
+
 return Config

@@ -286,7 +286,11 @@ task.spawn(function()
         assert(raw_effects, "EffectReplicator unavailable")
         env.EffectReplicator = base_require(raw_effects)
         -- Feature factories are now loaded on first enable, never at startup.
-        if runtime.alive then runtime.status = "ready"; runtime.echo:resume() end
+        if runtime.alive then
+            runtime.status = "ready"
+            pcall(function() runtime.config:autoload() end)
+            runtime.echo:resume()
+        end
     end)
     if not runtime.alive then return end
     if not ok then

@@ -48,6 +48,14 @@ assert(runtime.flags.walk_speed==32 and runtime.flags.fly==false and toggles==0,
 config:load("one",true)
 assert(runtime.flags.fly and toggles>=47,"explicit toggle restoration")
 assert(runtime.echo.running==false,"config never starts a farm")
+config:set_autoload("one",true)
+local a_name,a_flags=config:get_autoload()
+assert(a_name=="one" and a_flags==true,"autoload getter")
+runtime.flags.fly=false
+assert(config:autoload(),"autoload execute")
+assert(runtime.flags.fly,"autoload restores saved state")
+config:clear_autoload()
+assert(config:get_autoload()==nil,"autoload cleared")
 for _,name in ipairs({"../bad","x/y","x\\\\y","",string.rep("x",49)}) do assert(not pcall(config.save,config,name),"invalid profile name accepted") end
 local bad=clone(snapshot);bad.bindings.speed="F"
 files["Arteria/Configs/profile-bad.json"]=http:JSONEncode(bad)

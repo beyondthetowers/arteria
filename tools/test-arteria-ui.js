@@ -132,11 +132,14 @@ local farm_starts,farm_stops=0,0
 function runtime.echo:start(slot) assert(slot=="A");farm_starts+=1;self.running=true;self.session.enabled=true end
 function runtime.echo:stop() farm_stops+=1;self.running=false;self.session.enabled=false;runtime.refresh() end
 local config_saved,config_loaded,config_deleted=0,0,0
-runtime.config={message="Profiles ready",profiles={"one"}}
+runtime.config={message="Profiles ready",profiles={"one"},autoload_name=nil}
 function runtime.config:list() return self.profiles end
 function runtime.config:save(name) assert(name=="one");config_saved+=1 end
 function runtime.config:load(name,flags) assert(name=="one");config_loaded+=1;self.last_flags=flags end
 function runtime.config:delete(name) assert(name=="one");config_deleted+=1 end
+function runtime.config:get_autoload() return self.autoload_name,false end
+function runtime.config:set_autoload(name) self.autoload_name=name end
+function runtime.config:clear_autoload() self.autoload_name=nil end
 for _,entry in ipairs(catalog.entries) do runtime.flags[entry.id]=false;for _,o in ipairs(entry.settings) do runtime.flags[o.id]=o.value end end
 UI.mount(runtime)
 local panel=runtime.gui:FindFirstChild("Panel")
