@@ -85,13 +85,6 @@ function Compat.restore_point(id)
         local overlay = gui and gui:FindFirstChild("OverlayGui")
         local enabled = overlay and overlay.Enabled
         return function() if overlay and overlay.Parent then overlay.Enabled = enabled end end
-    elseif id == "void_mobs" then
-        local value = workspace.FallenPartsDestroyHeight
-        local attribute = workspace:GetAttribute("OriginalFPDH")
-        return function()
-            workspace.FallenPartsDestroyHeight = value
-            workspace:SetAttribute("OriginalFPDH", attribute)
-        end
     end
 end
 

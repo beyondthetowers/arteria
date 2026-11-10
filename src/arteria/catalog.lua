@@ -110,6 +110,7 @@ add("World", "ap_breaker", "AP breaker", "@src/features/exploits/ap_breaker", {
     choice("ap_breaker_type", "Mode", "Passive", { "Passive", "Aggressive", "Aggressive 2 (Blatant)", "Aggressive 3 (Blatant)" }),
     number("ap_breaker_intensity", "Intensity", 4, 1, 500),
 }, "observer")
+add("World", "void_mobs", "Void mobs", "@src/features/qol/void_mobs", nil, nil, "Drops naturally-owned mobs to the void · no freeze · use at own risk")
 add("World", "fake_void", "Fake void", "@src/features/qol/fake_void", nil, nil, "Depths only · uses no-kill-bricks dependency")
 add("World", "tp_eastern", "Teleport to Eastern", "@src/features/buttons/teleports/eastern", nil, "action", "Navigates to the Eastern Luminant realm gate")
 add("World", "tp_depths", "Teleport to Depths", "@src/features/buttons/teleports/depths", nil, "action", "Moves to the Depths entrance pit")
